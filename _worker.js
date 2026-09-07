@@ -174,12 +174,28 @@ export default {
     // the trialCookieValue branch above instead, so this never repeats.
     const isHtml = (response.headers.get('content-type') || '').includes('text/html');
     const out = isHtml
-      ? new Response(new HTMLRewriter().on('body', new WelcomeBannerInjector()).transform(response).body, response)
+      ? new Response(
+          new HTMLRewriter()
+            .on('head', new HeadFontInjector())
+            .on('body', new WelcomeBannerInjector())
+            .transform(response).body,
+          response
+        )
       : new Response(response.body, response);
     out.headers.append('Set-Cookie', buildCookie(TRIAL_COOKIE, trialId));
     return out;
   },
 };
+
+// Loads the brand's Google Fonts into the app's own <head> so the banner
+// below (injected into <body>, possibly a different document context than
+// the app's own styling) renders in Caveat/Patrick Hand instead of falling
+// back to a generic system font.
+class HeadFontInjector {
+  element(element) {
+    element.append(BRAND_FONTS, { html: true });
+  }
+}
 
 class WelcomeBannerInjector {
   element(element) {
@@ -188,12 +204,12 @@ class WelcomeBannerInjector {
 }
 
 const WELCOME_BANNER_HTML = `
-<div id="pp-trial-welcome" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999999;max-width:92vw;width:380px;background:#1c1830;color:#fff8fb;border:1px solid rgba(255,232,248,.18);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:16px 18px;font:15px/1.4 system-ui,-apple-system,sans-serif;display:flex;align-items:flex-start;gap:12px;">
+<div id="pp-trial-welcome" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%) rotate(-0.5deg);z-index:999999;max-width:92vw;width:400px;box-sizing:border-box;background:oklch(0.99 0.012 90);color:oklch(0.29 0.045 40);border:2.5px solid oklch(0.29 0.045 40);border-radius:40px 14px 40px 14px / 14px 34px 14px 34px;box-shadow:5px 6px 0 0 oklch(0.29 0.045 40);padding:1.1rem 1.25rem;font-family:'Patrick Hand',cursive;font-size:0.98rem;line-height:1.4;display:flex;align-items:flex-start;gap:0.75rem;">
   <div style="flex:1;">
-    <strong style="display:block;margin-bottom:4px;">🎉 Welcome to your 7-day free trial!</strong>
-    <span style="color:#c9c1d6;font-size:13.5px;">Explore everything, no signup or card needed. Bought on Etsy already? Just enter your access key any time.</span>
+    <strong style="display:block;margin-bottom:0.25rem;font-family:'Caveat',cursive;font-size:1.6rem;font-weight:700;">🎉 Welcome to your 7-day free trial!</strong>
+    <span style="color:oklch(0.48 0.035 55);">Explore everything, no signup or card needed. Bought on Etsy already? Just enter your access key any time.</span>
   </div>
-  <button onclick="document.getElementById('pp-trial-welcome').remove()" aria-label="Dismiss" style="background:none;border:0;color:#c9c1d6;font-size:20px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+  <button onclick="document.getElementById('pp-trial-welcome').remove()" aria-label="Dismiss" style="background:none;border:0;color:oklch(0.48 0.035 55);font-size:1.3rem;line-height:1;cursor:pointer;padding:0;font-family:inherit;">&times;</button>
 </div>`;
 
 function parseCookies(cookieHeader) {
@@ -297,6 +313,49 @@ function buildCookie(name, value, days = COOKIE_DAYS) {
 
 const ETSY_LISTING_URL = 'https://checkdesignz.etsy.com/listing/4562855179';
 
+// Matches the "Seamlessly Creative" brand (checkdesignz.com) - same tokens,
+// fonts and hand-drawn doodle-card/doodle-pill shapes as the marketing site,
+// so the gate/recover pages and the trial-welcome banner feel like part of
+// the same product instead of a generic dark SaaS auth screen.
+const BRAND_FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&display=swap">`;
+
+const BRAND_STYLE = `
+  :root{
+    --cream: oklch(0.965 0.021 88);
+    --ink: oklch(0.29 0.045 40);
+    --coral: oklch(0.76 0.11 35);
+    --coral-foreground: oklch(0.27 0.05 35);
+    --card: oklch(0.99 0.012 90);
+    --muted-foreground: oklch(0.48 0.035 55);
+    --font-display: "Caveat", cursive;
+    --font-body: "Patrick Hand", cursive;
+  }
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--cream);color:var(--ink);font:17px/1.5 var(--font-body);padding:2rem 1rem;}
+  .card{max-width:380px;width:100%;padding:2.25rem 2rem;text-align:center;
+    background:var(--card);border:2.5px solid var(--ink);
+    border-radius:250px 18px 235px 18px / 18px 220px 18px 235px;
+    box-shadow:5px 6px 0 0 var(--ink);transform:rotate(-0.6deg);}
+  h1{font-family:var(--font-display);font-size:2.4rem;font-weight:700;margin:0 0 0.35rem;}
+  p{color:var(--muted-foreground);font-size:1.05rem;margin:0 0 1.25rem;}
+  input{width:100%;box-sizing:border-box;padding:0.7rem 1rem;border-radius:12px;
+    border:2px solid var(--ink);background:var(--cream);color:var(--ink);
+    font:1.05rem var(--font-body);margin-bottom:0.85rem;}
+  input::placeholder{color:var(--muted-foreground);}
+  button{width:100%;border:2.5px solid var(--ink);
+    border-radius:140px 26px 140px 26px / 26px 130px 26px 130px;
+    box-shadow:4px 4px 0 0 var(--ink);background:var(--coral);color:var(--coral-foreground);
+    font-family:var(--font-display);font-size:1.4rem;font-weight:700;
+    padding:0.6rem 1.25rem;cursor:pointer;transition:transform 150ms ease, box-shadow 150ms ease;}
+  button:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 0 var(--ink);}
+  .err{color:color-mix(in oklab, var(--coral) 65%, var(--ink));font-size:0.95rem;margin:-0.5rem 0 1rem;}
+  .buyLink{display:block;margin-top:1rem;color:var(--coral-foreground);font-size:1rem;
+    font-weight:700;text-decoration:underline;text-underline-offset:3px;}
+  .recoverLink, a.back{display:block;margin-top:0.75rem;color:var(--muted-foreground);
+    font-size:0.9rem;text-decoration:none;}
+  .recoverLink:hover, a.back:hover{text-decoration:underline;color:var(--ink);}
+`;
+
 function gatePage(variant) {
   let heading = 'Pattern Pages';
   let message = 'Enter your access key to continue.';
@@ -320,25 +379,8 @@ function gatePage(variant) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pattern Pages</title>
-<style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:#141225;color:#fff8fb;font:16px/1.5 system-ui,-apple-system,sans-serif;}
-  .card{max-width:360px;width:90%;padding:32px 28px;border-radius:18px;
-    background:rgba(255,255,255,.06);border:1px solid rgba(255,232,248,.14);text-align:center;}
-  h1{font-size:20px;margin:0 0 6px;}
-  p{color:#c9c1d6;font-size:14px;margin:0 0 20px;}
-  input{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;
-    border:1px solid rgba(255,232,248,.24);background:rgba(255,255,255,.07);
-    color:#fff8fb;font-size:15px;margin-bottom:12px;}
-  button{width:100%;padding:12px;border:0;border-radius:12px;font-weight:800;
-    font-size:15px;cursor:pointer;color:#fff;
-    background:linear-gradient(90deg,#7c5cff,#ff5ea8);}
-  .err{color:#ff8ea3;font-size:13px;margin:-8px 0 14px;}
-  .buyLink{display:block;margin-top:14px;color:#ffb8e7;font-size:13.5px;font-weight:700;text-decoration:none;}
-  .buyLink:hover{text-decoration:underline;}
-  .recoverLink{display:block;margin-top:10px;color:#9b93ad;font-size:12.5px;text-decoration:none;}
-  .recoverLink:hover{text-decoration:underline;color:#c9c1d6;}
-</style>
+${BRAND_FONTS}
+<style>${BRAND_STYLE}</style>
 </head>
 <body>
   <div class="card">
@@ -555,22 +597,8 @@ function recoverPage({ submitted = false, rateLimited = false } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pattern Pages — recover access key</title>
-<style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:#141225;color:#fff8fb;font:16px/1.5 system-ui,-apple-system,sans-serif;}
-  .card{max-width:380px;width:90%;padding:32px 28px;border-radius:18px;
-    background:rgba(255,255,255,.06);border:1px solid rgba(255,232,248,.14);text-align:center;}
-  h1{font-size:20px;margin:0 0 6px;}
-  p{color:#c9c1d6;font-size:14px;margin:0 0 20px;}
-  input{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;
-    border:1px solid rgba(255,232,248,.24);background:rgba(255,255,255,.07);
-    color:#fff8fb;font-size:15px;margin-bottom:12px;}
-  button{width:100%;padding:12px;border:0;border-radius:12px;font-weight:800;
-    font-size:15px;cursor:pointer;color:#fff;
-    background:linear-gradient(90deg,#7c5cff,#ff5ea8);}
-  a.back{display:block;margin-top:14px;color:#9b93ad;font-size:12.5px;text-decoration:none;}
-  a.back:hover{text-decoration:underline;color:#c9c1d6;}
-</style>
+${BRAND_FONTS}
+<style>${BRAND_STYLE}</style>
 </head>
 <body>
   <div class="card">
