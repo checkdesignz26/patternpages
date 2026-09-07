@@ -6,3 +6,7 @@ main = "_worker.js"
 directory = "./"
 binding = "ASSETS"
 run_worker_first = true
+
+[[kv_namespaces]]
+binding = "PP_LICENSES"
+id = "e70b5c047a6a43d78376f8ac56d829b5"
