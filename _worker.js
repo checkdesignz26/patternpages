@@ -173,15 +173,23 @@ export default {
     // banner injected - every later request in the same trial goes through
     // the trialCookieValue branch above instead, so this never repeats.
     const isHtml = (response.headers.get('content-type') || '').includes('text/html');
-    const out = isHtml
-      ? new Response(
-          new HTMLRewriter()
-            .on('head', new HeadFontInjector())
-            .on('body', new WelcomeBannerInjector())
-            .transform(response).body,
-          response
-        )
-      : new Response(response.body, response);
+    let out;
+    if (isHtml) {
+      const rewritten = new HTMLRewriter()
+        .on('head', new HeadFontInjector())
+        .on('body', new WelcomeBannerInjector())
+        .transform(response);
+      // The injected markup makes the body longer than the original
+      // Content-Length the static-asset response came with. Left in place,
+      // browsers stop reading at that original byte count and silently
+      // truncate exactly the appended banner/font-link - drop the header
+      // here so the response falls back to chunked transfer instead.
+      const headers = new Headers(rewritten.headers);
+      headers.delete('content-length');
+      out = new Response(rewritten.body, { status: rewritten.status, statusText: rewritten.statusText, headers });
+    } else {
+      out = new Response(response.body, response);
+    }
     out.headers.append('Set-Cookie', buildCookie(TRIAL_COOKIE, trialId));
     return out;
   },
