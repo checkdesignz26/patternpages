@@ -169,11 +169,32 @@ export default {
 
     const trialId = await mintTrial(env);
     const response = await env.ASSETS.fetch(request);
-    const out = new Response(response.body, response);
+    // Only the very first response for a brand-new visitor gets the welcome
+    // banner injected - every later request in the same trial goes through
+    // the trialCookieValue branch above instead, so this never repeats.
+    const isHtml = (response.headers.get('content-type') || '').includes('text/html');
+    const out = isHtml
+      ? new Response(new HTMLRewriter().on('body', new WelcomeBannerInjector()).transform(response).body, response)
+      : new Response(response.body, response);
     out.headers.append('Set-Cookie', buildCookie(TRIAL_COOKIE, trialId));
     return out;
   },
 };
+
+class WelcomeBannerInjector {
+  element(element) {
+    element.append(WELCOME_BANNER_HTML, { html: true });
+  }
+}
+
+const WELCOME_BANNER_HTML = `
+<div id="pp-trial-welcome" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999999;max-width:92vw;width:380px;background:#1c1830;color:#fff8fb;border:1px solid rgba(255,232,248,.18);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:16px 18px;font:15px/1.4 system-ui,-apple-system,sans-serif;display:flex;align-items:flex-start;gap:12px;">
+  <div style="flex:1;">
+    <strong style="display:block;margin-bottom:4px;">🎉 Welcome to your 7-day free trial!</strong>
+    <span style="color:#c9c1d6;font-size:13.5px;">Explore everything, no signup or card needed. Bought on Etsy already? Just enter your access key any time.</span>
+  </div>
+  <button onclick="document.getElementById('pp-trial-welcome').remove()" aria-label="Dismiss" style="background:none;border:0;color:#c9c1d6;font-size:20px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+</div>`;
 
 function parseCookies(cookieHeader) {
   const out = {};
