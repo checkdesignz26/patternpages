@@ -1,5 +1,6 @@
 /**
  * Pattern Pages — access-key gate + 7-day free trial
+ * (deployed via Cloudflare's Git integration from this repo)
  *
  * This is the code layer in front of the static `index.html` deployment
  * (Cloudflare runs this script's fetch handler first, per `run_worker_first`
