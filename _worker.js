@@ -454,7 +454,9 @@ const BRAND_STYLE = `
     --font-body: "Patrick Hand", cursive;
   }
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:var(--cream);color:var(--ink);font:17px/1.5 var(--font-body);padding:2rem 1rem;}
+    background-color:var(--cream);color:var(--ink);font:17px/1.5 var(--font-body);padding:2rem 1rem;
+    background-image:radial-gradient(oklch(0.86 0.04 80 / 0.5) 1.2px, transparent 1.3px);
+    background-size:22px 22px;}
   .card{max-width:380px;width:100%;padding:2.25rem 2rem;text-align:center;
     background:var(--card);border:2.5px solid var(--ink);
     border-radius:250px 18px 235px 18px / 18px 220px 18px 235px;
