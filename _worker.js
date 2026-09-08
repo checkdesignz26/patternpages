@@ -82,12 +82,17 @@ export default {
     if (url.pathname === '/admin/reset-trials') {
       return handleResetTrials(request, env);
     }
+    if (url.pathname === '/start-trial') {
+      return handleStartTrial(request, env);
+    }
 
     const cookies = parseCookies(request.headers.get('Cookie') || '');
 
     let attemptedKey = null;
+    let postForm = null;
     if (request.method === 'POST') {
-      attemptedKey = await getFormKey(request);
+      postForm = await getFormData(request);
+      attemptedKey = postForm ? postForm.get('key') : null;
     } else {
       attemptedKey = url.searchParams.get('key');
     }
@@ -97,6 +102,21 @@ export default {
     // itself - this is what actually blunts brute-forcing a short numeric
     // keyspace now that there's more than one valid value to guess.
     if (attemptedKey !== null) {
+      // Only a typed-in form submission needs the CAPTCHA - a GET ?key=
+      // link from an email is already a private, non-guessable link, not a
+      // brute-forceable surface. Checked before the rate limit below so a
+      // bot that fails this doesn't even spend one of its attempts.
+      if (request.method === 'POST') {
+        const token = postForm ? postForm.get('cf-turnstile-response') : null;
+        const human = await verifyTurnstile(request, env, token);
+        if (!human) {
+          return new Response(gatePage('captchaFailed'), {
+            status: 401,
+            headers: { 'content-type': 'text/html; charset=utf-8' },
+          });
+        }
+      }
+
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       const allowed = await checkAndBumpRateLimit(env, `ratelimit:${ip}`, RATE_LIMIT_MAX_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS);
       if (!allowed) {
@@ -161,7 +181,15 @@ export default {
       const trial = await getRawRecord(env, trialCookieValue);
       if (trial && trial.type === 'trial' && !trial.revoked) {
         if (Date.now() < trial.expiresAt) {
-          return env.ASSETS.fetch(request);
+          const response = await env.ASSETS.fetch(request);
+          // /start-trial redirects here with ?welcome=1 on the very first
+          // request of a freshly minted trial - inject the banner exactly
+          // once, right here, since minting itself now happens in that
+          // separate POST, which never sees the actual page content.
+          if (url.searchParams.get('welcome') === '1') {
+            return injectWelcomeBanner(response);
+          }
+          return response;
         }
         return new Response(gatePage('trialExpired'), {
           status: 401,
@@ -181,33 +209,89 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-    const trialId = await mintTrial(env);
-    const response = await env.ASSETS.fetch(request);
-    // Only the very first response for a brand-new visitor gets the welcome
-    // banner injected - every later request in the same trial goes through
-    // the trialCookieValue branch above instead, so this never repeats.
-    const isHtml = (response.headers.get('content-type') || '').includes('text/html');
-    let out;
-    if (isHtml) {
-      const rewritten = new HTMLRewriter()
-        .on('head', new HeadFontInjector())
-        .on('body', new WelcomeBannerInjector())
-        .transform(response);
-      // The injected markup makes the body longer than the original
-      // Content-Length the static-asset response came with. Left in place,
-      // browsers stop reading at that original byte count and silently
-      // truncate exactly the appended banner/font-link - drop the header
-      // here so the response falls back to chunked transfer instead.
-      const headers = new Headers(rewritten.headers);
-      headers.delete('content-length');
-      out = new Response(rewritten.body, { status: rewritten.status, statusText: rewritten.statusText, headers });
-    } else {
-      out = new Response(response.body, response);
-    }
-    out.headers.append('Set-Cookie', buildCookie(TRIAL_COOKIE, trialId));
-    return out;
+    // A brand-new human visitor - show a quick CAPTCHA interstitial before
+    // minting a trial, rather than minting one automatically. Turnstile's
+    // managed mode passes most real visitors through with no visible
+    // challenge at all, but it stops scripted trial-farming and keeps
+    // /admin/stats meaningful.
+    return new Response(trialGatePage({ redirectTo: url.pathname }), {
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    });
   },
 };
+
+async function handleStartTrial(request, env) {
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+  const form = await getFormData(request);
+  const token = form ? form.get('cf-turnstile-response') : null;
+  const human = await verifyTurnstile(request, env, token);
+  const redirectTo = (form && form.get('redirect_to')) || '/';
+  if (!human) {
+    return new Response(trialGatePage({ error: true, redirectTo }), {
+      status: 401,
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    });
+  }
+
+  const trialId = await mintTrial(env);
+  const separator = redirectTo.includes('?') ? '&' : '?';
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: redirectTo + separator + 'welcome=1',
+      'Set-Cookie': buildCookie(TRIAL_COOKIE, trialId),
+    },
+  });
+}
+
+function trialGatePage({ error = false, redirectTo = '/' } = {}) {
+  const errorLine = error ? '<div class="err">That didn\'t verify - please try the checkbox again.</div>' : '';
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pattern Pages</title>
+${BRAND_FONTS}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<style>${BRAND_STYLE}
+  #pp-trial-go:disabled{opacity:0.5;cursor:default;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Pattern Pages</h1>
+    <p>One quick check before your free 7-day trial starts.</p>
+    ${errorLine}
+    <form method="POST" action="/start-trial">
+      <input type="hidden" name="redirect_to" value="${escapeHtml(redirectTo)}">
+      <div class="cf-turnstile" data-sitekey="${TURNSTILE_SITE_KEY}" data-callback="ppTrialEnable" style="margin-bottom:0.85rem;display:flex;justify-content:center;"></div>
+      <button type="submit" id="pp-trial-go" disabled>start my trial</button>
+    </form>
+  </div>
+  <script>function ppTrialEnable(){document.getElementById('pp-trial-go').disabled=false;}</script>
+</body>
+</html>`;
+}
+
+function injectWelcomeBanner(response) {
+  const isHtml = (response.headers.get('content-type') || '').includes('text/html');
+  if (!isHtml) return response;
+  const rewritten = new HTMLRewriter()
+    .on('head', new HeadFontInjector())
+    .on('body', new WelcomeBannerInjector())
+    .transform(response);
+  // The injected markup makes the body longer than the original
+  // Content-Length the static-asset response came with. Left in place,
+  // browsers stop reading at that original byte count and silently
+  // truncate exactly the appended banner/font-link - drop the header here
+  // so the response falls back to chunked transfer instead.
+  const headers = new Headers(rewritten.headers);
+  headers.delete('content-length');
+  return new Response(rewritten.body, { status: rewritten.status, statusText: rewritten.statusText, headers });
+}
 
 // Loads the brand's Google Fonts into the app's own <head> so the banner
 // below (injected into <body>, possibly a different document context than
@@ -259,10 +343,9 @@ function parseCookies(cookieHeader) {
   return out;
 }
 
-async function getFormKey(request) {
+async function getFormData(request) {
   try {
-    const form = await request.clone().formData();
-    return form.get('key');
+    return await request.clone().formData();
   } catch (e) {
     return null;
   }
@@ -395,6 +478,28 @@ const BRAND_STYLE = `
   .recoverLink:hover, a.back:hover{text-decoration:underline;color:var(--ink);}
 `;
 
+// Turnstile (Cloudflare's CAPTCHA alternative) - the site key is public by
+// design and safe to embed directly in pages; only the secret key (used in
+// verifyTurnstile below) needs to stay private, as the TURNSTILE_SECRET_KEY
+// Worker secret.
+const TURNSTILE_SITE_KEY = '0x4AAAAAAEsKixos7mXlnT_O';
+
+async function verifyTurnstile(request, env, token) {
+  if (!token || !env.TURNSTILE_SECRET_KEY) return false;
+  try {
+    const body = new URLSearchParams();
+    body.set('secret', env.TURNSTILE_SECRET_KEY);
+    body.set('response', token);
+    const ip = request.headers.get('CF-Connecting-IP');
+    if (ip) body.set('remoteip', ip);
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body });
+    const data = await res.json();
+    return !!data.success;
+  } catch (e) {
+    return false;
+  }
+}
+
 function gatePage(variant) {
   let heading = 'Pattern Pages';
   let message = 'Enter your access key to continue.';
@@ -410,6 +515,8 @@ function gatePage(variant) {
   } else if (variant === 'rateLimited') {
     heading = 'Too many attempts';
     message = 'Too many key attempts from this connection - please wait a bit and try again.';
+  } else if (variant === 'captchaFailed') {
+    errorLine = '<div class="err">That didn\'t verify - please try the checkbox again.</div>';
   }
 
   return `<!doctype html>
@@ -419,7 +526,10 @@ function gatePage(variant) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pattern Pages</title>
 ${BRAND_FONTS}
-<style>${BRAND_STYLE}</style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<style>${BRAND_STYLE}
+  #pp-unlock-btn:disabled{opacity:0.5;cursor:default;}
+</style>
 </head>
 <body>
   <div class="card">
@@ -428,11 +538,13 @@ ${BRAND_FONTS}
     ${errorLine}
     <form method="POST">
       <input type="text" name="key" placeholder="Access key" autofocus autocomplete="off">
-      <button type="submit">Unlock</button>
+      <div class="cf-turnstile" data-sitekey="${TURNSTILE_SITE_KEY}" data-callback="ppGateEnable" style="margin-bottom:0.85rem;display:flex;justify-content:center;"></div>
+      <button type="submit" id="pp-unlock-btn" disabled>Unlock</button>
     </form>
     ${showBuyLink ? `<a class="buyLink" href="${ETSY_LISTING_URL}" target="_blank" rel="noopener">Buy Pattern Pages on Etsy &rarr;</a>` : ''}
     ${variant !== 'rateLimited' ? `<a class="recoverLink" href="/recover">Lost your access key?</a>` : ''}
   </div>
+  <script>function ppGateEnable(){document.getElementById('pp-unlock-btn').disabled=false;}</script>
 </body>
 </html>`;
 }
