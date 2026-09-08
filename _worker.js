@@ -76,6 +76,9 @@ export default {
     if (url.pathname === '/recover') {
       return handleRecover(request, env);
     }
+    if (url.pathname === '/admin/stats') {
+      return handleStats(request, env);
+    }
 
     const cookies = parseCookies(request.headers.get('Cookie') || '');
 
@@ -288,8 +291,12 @@ async function getRawRecord(env, code) {
 async function mintTrial(env) {
   const id = 'trial_' + crypto.randomUUID().replace(/-/g, '');
   const now = Date.now();
-  const record = { type: 'trial', createdAt: now, expiresAt: now + TRIAL_DAYS * 24 * 60 * 60 * 1000, revoked: false };
-  await env.PP_LICENSES.put(id, JSON.stringify(record));
+  const expiresAt = now + TRIAL_DAYS * 24 * 60 * 60 * 1000;
+  const record = { type: 'trial', createdAt: now, expiresAt, revoked: false };
+  // Storing expiresAt as KV metadata (not just inside the value) lets the
+  // stats page below count active-vs-expired trials straight from list()
+  // results, without a separate get() per trial.
+  await env.PP_LICENSES.put(id, JSON.stringify(record), { metadata: { expiresAt } });
   return id;
 }
 
@@ -506,6 +513,76 @@ async function handleRecover(request, env) {
   // page can't be used to check which email addresses have a code
   // (email enumeration).
   return new Response(recoverPage({ submitted: true }), { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+}
+
+// ---------------------------------------------------------------------
+// A private view-only stats page for the shop owner - counts trials
+// straight out of KV, no email or any other visitor data involved.
+// ---------------------------------------------------------------------
+
+async function handleStats(request, env) {
+  const url = new URL(request.url);
+  const providedKey = url.searchParams.get('key') || '';
+  if (!env.STATS_KEY || providedKey !== env.STATS_KEY) {
+    // 404 rather than 401/403 so this route doesn't advertise its own
+    // existence to anyone poking around without the key.
+    return new Response('Not found', { status: 404 });
+  }
+
+  const now = Date.now();
+  let totalTrials = 0;
+  let activeTrials = 0;
+  let cursor;
+  do {
+    const page = await env.PP_LICENSES.list({ prefix: 'trial_', cursor });
+    for (const key of page.keys) {
+      totalTrials++;
+      let expiresAt = key.metadata && key.metadata.expiresAt;
+      if (expiresAt == null) {
+        // Trials minted before the metadata field existed - fall back to
+        // reading the value directly so old records still count correctly.
+        const raw = await env.PP_LICENSES.get(key.name);
+        if (raw) {
+          try {
+            expiresAt = JSON.parse(raw).expiresAt;
+          } catch (e) {}
+        }
+      }
+      if (expiresAt && now < expiresAt) activeTrials++;
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+
+  return new Response(statsPage(totalTrials, activeTrials), {
+    headers: { 'content-type': 'text/html; charset=utf-8' },
+  });
+}
+
+function statsPage(totalTrials, activeTrials) {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pattern Pages — trial stats</title>
+${BRAND_FONTS}
+<style>${BRAND_STYLE}
+  .stats-grid{display:flex;gap:1.5rem;justify-content:center;margin:0.5rem 0 1.25rem;}
+  .stat b{display:block;font-family:var(--font-display);font-size:2.75rem;line-height:1;}
+  .stat span{color:var(--muted-foreground);font-size:0.9rem;}
+</style>
+</head>
+<body>
+  <div class="card" style="max-width:420px;">
+    <h1>trial stats</h1>
+    <div class="stats-grid">
+      <div class="stat"><b>${totalTrials}</b><span>trials started</span></div>
+      <div class="stat"><b>${activeTrials}</b><span>active right now</span></div>
+    </div>
+    <p style="margin:0;">"active" means still within their 7-day window, not necessarily online this second. No emails or personal data involved.</p>
+  </div>
+</body>
+</html>`;
 }
 
 async function generateUniqueCode(env) {
