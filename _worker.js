@@ -79,6 +79,9 @@ export default {
     if (url.pathname === '/admin/stats') {
       return handleStats(request, env);
     }
+    if (url.pathname === '/admin/reset-trials') {
+      return handleResetTrials(request, env);
+    }
 
     const cookies = parseCookies(request.headers.get('Cookie') || '');
 
@@ -170,6 +173,14 @@ export default {
       // visitor below.
     }
 
+    // Crawlers, link-preview fetchers and uptime checkers never carry
+    // cookies either, so without this they'd each mint their own trial and
+    // inflate /admin/stats. They still get the real page - just without a
+    // trial being counted or a cookie being set for them.
+    if (isLikelyBot(request)) {
+      return env.ASSETS.fetch(request);
+    }
+
     const trialId = await mintTrial(env);
     const response = await env.ASSETS.fetch(request);
     // Only the very first response for a brand-new visitor gets the welcome
@@ -222,6 +233,19 @@ const WELCOME_BANNER_HTML = `
   </div>
   <button onclick="document.getElementById('pp-trial-welcome').remove()" aria-label="Dismiss" style="background:none;border:0;color:oklch(0.48 0.035 55);font-size:1.3rem;line-height:1;cursor:pointer;padding:0;font-family:inherit;">&times;</button>
 </div>`;
+
+// Not foolproof - a bot that lies about its User-Agent still gets counted -
+// but it filters out the well-behaved majority (search crawlers, link
+// unfurlers, uptime monitors, common HTTP libraries) without touching how
+// any real browser is treated.
+const BOT_USER_AGENT_PATTERN =
+  /bot|crawl|spider|slurp|facebookexternalhit|slackbot|twitterbot|whatsapp|telegrambot|discordbot|pingdom|uptimerobot|headlesschrome|curl|wget|python-requests|go-http-client|okhttp|libwww/i;
+
+function isLikelyBot(request) {
+  const ua = request.headers.get('User-Agent') || '';
+  if (!ua) return true;
+  return BOT_USER_AGENT_PATTERN.test(ua);
+}
 
 function parseCookies(cookieHeader) {
   const out = {};
@@ -580,6 +604,53 @@ ${BRAND_FONTS}
       <div class="stat"><b>${activeTrials}</b><span>active right now</span></div>
     </div>
     <p style="margin:0;">"active" means still within their 7-day window, not necessarily online this second. No emails or personal data involved.</p>
+  </div>
+</body>
+</html>`;
+}
+
+// One-time cleanup for the test trials minted while building/debugging this
+// system - safe to run any time since it only ever touches trial_* records,
+// never a real access key (lifetime or otherwise), so no paying customer is
+// affected even if they're mid-trial when this runs.
+async function handleResetTrials(request, env) {
+  const url = new URL(request.url);
+  const providedKey = url.searchParams.get('key') || '';
+  if (!env.STATS_KEY || providedKey !== env.STATS_KEY) {
+    return new Response('Not found', { status: 404 });
+  }
+
+  let deleted = 0;
+  let cursor;
+  do {
+    const page = await env.PP_LICENSES.list({ prefix: 'trial_', cursor });
+    for (const key of page.keys) {
+      await env.PP_LICENSES.delete(key.name);
+      deleted++;
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+
+  return new Response(resetTrialsPage(deleted, providedKey), {
+    headers: { 'content-type': 'text/html; charset=utf-8' },
+  });
+}
+
+function resetTrialsPage(deletedCount, key) {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pattern Pages — trials reset</title>
+${BRAND_FONTS}
+<style>${BRAND_STYLE}</style>
+</head>
+<body>
+  <div class="card" style="max-width:420px;">
+    <h1>done</h1>
+    <p>Deleted ${deletedCount} trial record${deletedCount === 1 ? '' : 's'}.</p>
+    <a class="buyLink" href="/admin/stats?key=${encodeURIComponent(key)}">view stats &rarr;</a>
   </div>
 </body>
 </html>`;
