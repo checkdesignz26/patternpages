@@ -311,7 +311,7 @@ class WelcomeBannerInjector {
 }
 
 const WELCOME_BANNER_HTML = `
-<div id="pp-trial-welcome" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%) rotate(-0.5deg);z-index:2147483647;max-width:92vw;width:400px;box-sizing:border-box;background:oklch(0.99 0.012 90);color:oklch(0.29 0.045 40);border:2.5px solid oklch(0.29 0.045 40);border-radius:40px 14px 40px 14px / 14px 34px 14px 34px;box-shadow:5px 6px 0 0 oklch(0.29 0.045 40);padding:1.1rem 1.25rem;font-family:'Patrick Hand',cursive;font-size:0.98rem;line-height:1.4;display:flex;align-items:flex-start;gap:0.75rem;">
+<div id="pp-trial-welcome" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%) rotate(-0.5deg);z-index:2147483647;max-width:92vw;width:400px;box-sizing:border-box;background:oklch(0.965 0.021 88);color:oklch(0.29 0.045 40);border:2.5px solid oklch(0.29 0.045 40);border-radius:40px 14px 40px 14px / 14px 34px 14px 34px;box-shadow:5px 6px 0 0 oklch(0.29 0.045 40);padding:1.1rem 1.25rem;font-family:'Patrick Hand',cursive;font-size:0.98rem;line-height:1.4;display:flex;align-items:flex-start;gap:0.75rem;">
   <div style="flex:1;">
     <strong style="display:block;margin-bottom:0.25rem;font-family:'Caveat',cursive;font-size:1.6rem;font-weight:700;">🎉 Welcome to your 7-day free trial!</strong>
     <span style="color:oklch(0.48 0.035 55);">Explore everything, no signup or card needed. Bought on Etsy already? Just enter your access key any time.</span>
