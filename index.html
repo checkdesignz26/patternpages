@@ -1586,7 +1586,7 @@ body.theme-light .swbResizeHandle::after{
 // Applied synchronously, before anything below paints, so a returning visitor who chose the
 // light theme never sees a flash of the dark theme first (the same reason the sister app's own
 // theme toggle applies its class this early rather than waiting for DOMContentLoaded).
-(function(){try{if(localStorage.getItem('patternPages.theme.v1')==='light')document.body.classList.add('theme-light');}catch(e){}})();
+(function(){try{if(localStorage.getItem('patternPages.theme.v1')!=='dark')document.body.classList.add('theme-light');}catch(e){}})();
 </script>
 <svg style="display:none" aria-hidden="true">
 <defs>
