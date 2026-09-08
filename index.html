@@ -14521,7 +14521,7 @@ window.addEventListener('DOMContentLoaded',function(){
     var countRow=body.querySelector('.frameCountRow');
     var wrap=document.createElement('div');
     wrap.className='showcaseSizeControls';
-    wrap.innerHTML='<div class="rangeRow"><label>layout size <span id="showcaseSizeValue">100%</span></label><input id="showcaseLayoutSize" type="range" min="55" max="115" value="100"></div><p class="smallText">Resize all generated circles, squares or rectangles together. Use this to make room for text above or below.</p>';
+    wrap.innerHTML='<div class="rangeRow"><label>layout size <span id="showcaseSizeValue">100%</span></label><input id="showcaseLayoutSize" type="range" min="55" max="115" value="100"></div><p class="smallText">Resize all generated circles, squares, rectangles or strips together. Use this to make room for text above or below.</p>';
     if(countRow && countRow.parentNode) countRow.parentNode.insertBefore(wrap,countRow.nextSibling);
     else body.appendChild(wrap);
     var slider=byId('showcaseLayoutSize');
@@ -19926,7 +19926,11 @@ else install();
   function isShowcaseSlot(l){
     // Captions ride along with the scale/move sliders too, so a caption stays put directly
     // under its own tile instead of drifting once the layout is nudged or resized.
-    return !!(l && ((l.generatedPatternLayout && (l.slotShape==='circle' || l.slotShape==='square' || l.slotShape==='rectangle')) || l.showcaseCaption));
+    // Real question: strips (vertical or horizontal stash) weren't wired to this panel at all -
+    // the layout size/position sliders sat there doing nothing whenever a strip layout was
+    // active, even though the same-looking control room is shown for every layout type. Included
+    // here so strips scale/move exactly the same way circles/squares/rectangles already do.
+    return !!(l && ((l.generatedPatternLayout && (l.slotShape==='circle' || l.slotShape==='square' || l.slotShape==='rectangle' || l.slotShape==='strip')) || l.showcaseCaption));
   }
   function getSlots(){
     var p=getCurrentPage();
