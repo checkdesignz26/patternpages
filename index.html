@@ -2973,6 +2973,12 @@ d.style.left=l.x+'%';
 d.style.top=l.y+'%';
 d.style.width=l.w+'%';
 d.style.height=l.h+'%';
+// Real report: "the eye doesn't make a layer invisible" - toggling it only ever flipped
+// l.hidden and re-rendered the layers-panel row (greyed out, changed icon), but this function -
+// the one that actually builds each layer's on-canvas element - never looked at l.hidden at all,
+// so the layer kept rendering normally regardless. renderPageToCanvas (the PNG export) has the
+// same gap, so a "hidden" layer would still show up in downloads too.
+if(l.hidden)d.style.display='none';
 d.style.setProperty("opacity", (l.opacity ?? 1), "important");
 d.style.zIndex=l.z;
 d.style.transform=`rotate(${l.r}deg) scale(${l.disclosureBadge?1:(l.scale||1)})`;
@@ -16851,17 +16857,28 @@ window.generatePatternShowcaseLayout=function(){
       z=Math.max(0,...p.layers.map(function(item){return Number(item&&item.z)||0;}))+1;
     }catch(_){ z=p.layers.length+1; }
 
+    // Real report, with a screenshot: several text boxes (a trial-launch banner, a heading and
+    // body copy) added one after another ended up stacked exactly on top of each other. This is
+    // the actual live addText() - window.addText fully replaces the original declaration further
+    // up the file (no fallback to it, see the NOTE left near addBadge's wrap below), which already
+    // had this same diagonal-stagger fix applied but never ran. Every new text layer landed at the
+    // identical x:18,y:35 regardless of how many already existed; cascade successive additions
+    // diagonally instead, wrapping after a few steps rather than walking off the page.
+    var textStagger=0;
+    try{ textStagger=(p.layers.filter(function(item){return item&&item.type==='text';}).length%5)*5; }catch(_){ }
+    var textX=18+textStagger, textY=35+textStagger;
+
     var textLayer;
     if(typeof layer==='function'){
       textLayer=layer('text',{
-        name:'plain text', text:'Text', x:18, y:35, w:45, h:12,
+        name:'plain text', text:'Text', x:textX, y:textY, w:45, h:12,
         fill:'transparent', color:'#555555', fontSize:42, z:z,
         locked:false, textLocked:false, interactionLocked:false
       });
     }else{
       textLayer={
         id:'text_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-        type:'text', name:'plain text', text:'Text', x:18, y:35, w:45, h:12,
+        type:'text', name:'plain text', text:'Text', x:textX, y:textY, w:45, h:12,
         r:0, opacity:1, scale:1, fill:'transparent', color:'#555555',
         font:'system-ui', fontSize:42, textAlign:'center', z:z
       };
@@ -20672,7 +20689,12 @@ else install();
     if(typeof window.drawTextureBackground==='function') window.drawTextureBackground(ctx,p);
     else{ ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,p.w,p.h); }
     var visualW=referenceStageWidth(p); var fontScale=Math.max(1,p.w/visualW);
-    var layers=(p.layers||[]).slice().sort(function(a,b){return (a.z||0)-(b.z||0)});
+    // Real report: "the eye doesn't make a layer invisible" - a hidden layer (l.hidden) was never
+    // excluded here, so it still showed up in downloaded PNGs even once renderLayer() was fixed
+    // to actually hide it live. This is the real, final exporter (window.renderPageToCanvas gets
+    // fully replaced by several later "generations" in this file, not wrapped - the earliest
+    // declaration this file has is dead code by the time a download button is actually clicked).
+    var layers=(p.layers||[]).filter(function(l){return !l.hidden;}).sort(function(a,b){return (a.z||0)-(b.z||0)});
     for(var i=0;i<layers.length;i++){
       var l=layers[i];
       // Real report, with a .ppages file: an exported icon badge (a circle + icon image grouped
