@@ -13795,6 +13795,19 @@ window.addEventListener('DOMContentLoaded',function(){
     try{ta.focus({preventScroll:true});}catch(_){try{ta.focus();}catch(e2){}}
     // Select placeholder text so typing replaces it immediately.
     try{ if(/^\s*(text|your label|new label)\s*$/i.test(ta.value||'')) ta.select(); else {ta.selectionStart=ta.selectionEnd=ta.value.length;} }catch(_){ }
+    // Real report: after this synchronous focus, the very first tap-to-select inside the
+    // textarea (drag-to-select, double-tap-a-word, or the Select/Cut system menu) either does
+    // nothing or only grabs one word, and the system selection menu is slow to appear - only the
+    // *second* attempt behaves normally. This matches a known WebKit quirk where a textarea
+    // focused synchronously via element.focus() from inside another event handler (rather than a
+    // raw untouched tap directly on the field) leaves iOS's text-selection UI in a half-armed
+    // state until something nudges it. A blur+refocus one frame later (after the keyboard/caret
+    // from the real focus above has already appeared, so it's not visibly lost) resets that state
+    // without affecting the synchronous-focus requirement noted above.
+    requestAnimationFrame(function(){
+      if(!active||active.ta!==ta)return;
+      try{ ta.blur(); ta.focus({preventScroll:true}); }catch(_){ }
+    });
     toast('type here — tap Done when finished');
     return true;
   }
