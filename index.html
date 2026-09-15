@@ -2420,7 +2420,17 @@ function addAIDisclosureBadge(){
  render();
 }
 
-function addText(kind='text'){save();current().layers.push(layer('text',{name:'plain text',text:'Text',x:18,y:35,w:45,h:12,fill:'transparent',fontSize:42,z:nextZ()}));state.selected=current().layers.at(-1).id;render()}
+function addText(kind='text'){save();
+  // Real report, with a screenshot: several text boxes added one after another (a trial-launch
+  // banner, a heading and body copy) ended up stacked exactly on top of each other, looking like
+  // an export/zoom bug - this always dropped every new text layer at the identical x:18,y:35, so
+  // repeated taps with no manual reposition in between land in the exact same spot every time.
+  // Cascade successive additions diagonally (like a new paste/insert in most design tools) so
+  // they're never fully hidden behind the last one; wraps after a few steps rather than walking
+  // off the page.
+  var n=current().layers.filter(function(x){return x.type==='text'}).length;
+  var offset=(n%5)*5;
+  current().layers.push(layer('text',{name:'plain text',text:'Text',x:18+offset,y:35+offset,w:45,h:12,fill:'transparent',fontSize:42,z:nextZ()}));state.selected=current().layers.at(-1).id;render()}
 function addBadge(shape){save();const dims={oval:[50,16],pill:[52,12],rounded:[46,16],square:[26,20],circle:[24,24],ribbon:[54,15]};const [w,h]=dims[shape]||dims.oval;let l=layer('label',{name:shape+' badge',text:'New label',x:24,y:32,w,h,fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,fontSize:38,bold:false,badgeShape:shape,z:nextZ()});current().layers.push(l);state.selected=l.id;render()}
 function addShape(kind){save();let sq=kind==='square'||kind==='circle';current().layers.push(layer(kind,{name:kind,x:25,y:25,w:sq?25:40,h:sq?25:18,fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,z:nextZ()}));state.selected=current().layers.at(-1).id;render()}
 function nextZ(){return Math.max(0,...current().layers.map(l=>l.z||0))+1}
