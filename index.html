@@ -1909,21 +1909,32 @@ function fittedLayerSizeForImage(img, targetW=72, minH=10, maxH=86){
  else if(h<minH){ h=minH; w=h*naturalAspect/pageAspect; }
  return {w,h};
 }
+// Same fixed-position stacking issue as addText()/addBadge()/addShape() above, for images,
+// banners, overlays and patterns placed one after another - every call for a given kind used to
+// return the identical box regardless of how many of that kind already existed. Nudge each
+// successive one diagonally, clamped so a big box (e.g. a near-full-page overlay) can never be
+// pushed past the page edge.
+function staggerBox(kind, x, y, w, h){
+ const n=current().layers.filter(function(l){return l.type===kind}).length;
+ const step=(n%5)*5;
+ const off=Math.max(0, Math.min(step, 100-w-x, 100-h-y));
+ return {x:x+off, y:y+off, w:w, h:h};
+}
 function placeInUsefulSize(kind, img){
  const p=current();
  if(kind==='banner'){
    const sz=fittedLayerSizeForImage(img, 90, 14, 34);
-   return {x:5, y:7, w:sz.w, h:sz.h};
+   return staggerBox(kind, 5, 7, sz.w, sz.h);
  }
  if(kind==='pattern'){
    const side=(p.w===p.h)?76:58;
-   return {x:(100-side)/2, y:(100-side)/2, w:side, h:side};
+   return staggerBox(kind, (100-side)/2, (100-side)/2, side, side);
  }
  if(kind==='overlay'){
-   return {x:5, y:5, w:90, h:90};
+   return staggerBox(kind, 5, 5, 90, 90);
  }
  const sz=fittedLayerSizeForImage(img, 68, 12, 82);
- return {x:(100-sz.w)/2, y:14, w:sz.w, h:sz.h};
+ return staggerBox(kind, (100-sz.w)/2, 14, sz.w, sz.h);
 }
 function save(){state.history.push(JSON.stringify({pages:state.pages,selectedPage:state.selectedPage,selected:state.selected}));state.redoStack=[];if(state.history.length>35)state.history.shift()}
 function ppUndoRedoHint(msg){let h=document.getElementById('selectedHint');if(h)h.textContent=msg;}
@@ -4080,7 +4091,15 @@ function usefulMockupLayerBox(img){
   const ratio=(img.naturalWidth||img.width)/Math.max(1,(img.naturalHeight||img.height));
   let w=88,h=w/ratio;
   if(h>88){h=88;w=h*ratio;}
-  return{x:(100-w)/2,y:(100-h)/2,w,h};
+  let x=(100-w)/2, y=(100-h)/2;
+  // Same fixed-position stacking issue as addText() etc. above - every custom mock-up used to
+  // land in the identical centered box. Custom mock-ups are stored as type:'image' with
+  // customMockup:true, not their own layer type, so count those specifically rather than every
+  // plain image.
+  const n=current().layers.filter(function(l){return l.customMockup}).length;
+  const step=(n%5)*5;
+  const off=Math.max(0, Math.min(step, 100-w-x, 100-h-y));
+  return{x:x+off,y:y+off,w,h};
 }
 async function createCustomMockupFromMask(){
   const patternSrc=customMockupSelectedPatternSrc();
