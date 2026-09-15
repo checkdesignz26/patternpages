@@ -3769,6 +3769,27 @@ function drawRoundedRectPath(ctx,x,y,w,h,r){const rr=Math.min(r,w/2,h/2);ctx.beg
 function waitForImage(src){
  return new Promise((resolve,reject)=>{let img=new Image(); img.onload=()=>resolve(img); img.onerror=reject; img.src=src;});
 }
+// Real report, with screenshots: exported pages didn't match the canvas - a gap appeared between
+// a heading and the smaller body text below it. renderPageToCanvas's text drawing used a single
+// ctx.fillText() call per layer with no wrapping at all, while the on-screen .shapeText box is a
+// flex container that wraps normally via CSS and vertically centers the whole wrapped block.
+// Multi-line text collapsed onto one canvas-centered line in the export, leaving empty space
+// where the other on-screen lines used to be. Wrap manually here to match.
+function wrapCanvasText(ctx,text,maxWidth){
+  const paragraphs=String(text==null?'':text).split('\n');
+  const lines=[];
+  paragraphs.forEach(function(para){
+    const words=para.split(' ');
+    let current='';
+    words.forEach(function(word){
+      const test=current?current+' '+word:word;
+      if(!current || ctx.measureText(test).width<=maxWidth){ current=test; }
+      else { lines.push(current); current=word; }
+    });
+    lines.push(current);
+  });
+  return lines;
+}
 async function renderPageToCanvas(p){
  const canvas=document.createElement('canvas');
  canvas.width=p.w; canvas.height=p.h;
@@ -3805,8 +3826,16 @@ async function renderPageToCanvas(p){
        ctx.shadowColor=l.effectColor||'#ffffff'; ctx.shadowBlur=l.textGlow||0; ctx.shadowOffsetX=(l.textShadow||0)?2:0; ctx.shadowOffsetY=(l.textShadow||0)?3:0;
        const tx=(l.textAlign==='left')?(-w/2+12):((l.textAlign==='right')?(w/2-12):0);
        const badgeText=l.disclosureBadge?'AI Generated':l.text;
-       if(l.textStroke){ctx.lineWidth=l.textStroke*2;ctx.strokeStyle=l.effectColor||'#ffffff';ctx.strokeText(badgeText,tx,0,w*.94)}
-       ctx.fillText(badgeText,tx,0,w*.94);
+       const maxWidth=w*.94;
+       const lineHeightPx=(l.lineHeight||1.05)*(l.fontSize||36);
+       const wrappedLines=wrapCanvasText(ctx,badgeText,maxWidth);
+       const blockHeight=wrappedLines.length*lineHeightPx;
+       const startY=-blockHeight/2+lineHeightPx/2;
+       wrappedLines.forEach(function(line,i){
+         const ly=startY+i*lineHeightPx;
+         if(l.textStroke){ctx.lineWidth=l.textStroke*2;ctx.strokeStyle=l.effectColor||'#ffffff';ctx.strokeText(line,tx,ly,maxWidth);}
+         ctx.fillText(line,tx,ly,maxWidth);
+       });
      }
    }else{
      ctx.fillStyle='#ffffff'; ctx.fillRect(-w/2,-h/2,w,h);
