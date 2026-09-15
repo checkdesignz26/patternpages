@@ -3746,12 +3746,28 @@ function importFont(e){
 }
 
 function toggleSidePanel(side){
+  // Real request: on a portrait/narrow iPad the fixed-width side panels leave almost no room
+  // for the canvas when both are open at once - squishing it, rather than just narrowing it.
+  // Auto-collapsing both panels on load already existed, but reopening either one manually left
+  // both open again with no way back to a full-width canvas short of collapsing each by hand.
+  // In portrait, opening one panel now auto-closes the other, so at most one is ever open and
+  // the canvas gets full width the moment both are closed - still fully under manual control,
+  // never forced shut against what you're doing.
+  var portrait = window.matchMedia('(orientation: portrait), (max-width: 900px)').matches;
   if(side==='left'){
     state.leftCollapsed=!state.leftCollapsed;
     document.body.classList.toggle('leftCollapsed',state.leftCollapsed);
+    if(portrait && !state.leftCollapsed && !state.rightCollapsed){
+      state.rightCollapsed=true;
+      document.body.classList.add('rightCollapsed');
+    }
   }else{
     state.rightCollapsed=!state.rightCollapsed;
     document.body.classList.toggle('rightCollapsed',state.rightCollapsed);
+    if(portrait && !state.rightCollapsed && !state.leftCollapsed){
+      state.leftCollapsed=true;
+      document.body.classList.add('leftCollapsed');
+    }
   }
   setTimeout(()=>{ try{$('workspace').scrollLeft=$('workspace').scrollLeft;}catch(e){} },30);
 }
