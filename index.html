@@ -2431,8 +2431,16 @@ function addText(kind='text'){save();
   var n=current().layers.filter(function(x){return x.type==='text'}).length;
   var offset=(n%5)*5;
   current().layers.push(layer('text',{name:'plain text',text:'Text',x:18+offset,y:35+offset,w:45,h:12,fill:'transparent',fontSize:42,z:nextZ()}));state.selected=current().layers.at(-1).id;render()}
-function addBadge(shape){save();const dims={oval:[50,16],pill:[52,12],rounded:[46,16],square:[26,20],circle:[24,24],ribbon:[54,15]};const [w,h]=dims[shape]||dims.oval;let l=layer('label',{name:shape+' badge',text:'New label',x:24,y:32,w,h,fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,fontSize:38,bold:false,badgeShape:shape,z:nextZ()});current().layers.push(l);state.selected=l.id;render()}
-function addShape(kind){save();let sq=kind==='square'||kind==='circle';current().layers.push(layer(kind,{name:kind,x:25,y:25,w:sq?25:40,h:sq?25:18,fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,z:nextZ()}));state.selected=current().layers.at(-1).id;render()}
+function addBadge(shape){save();const dims={oval:[50,16],pill:[52,12],rounded:[46,16],square:[26,20],circle:[24,24],ribbon:[54,15]};const [w,h]=dims[shape]||dims.oval;
+  // Same fixed-position stacking issue as addText() above, for badges added one after another.
+  var nBadge=current().layers.filter(function(x){return x.type==='label'}).length;
+  var offsetBadge=(nBadge%5)*5;
+  let l=layer('label',{name:shape+' badge',text:'New label',x:24+offsetBadge,y:32+offsetBadge,w,h,fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,fontSize:38,bold:false,badgeShape:shape,z:nextZ()});current().layers.push(l);state.selected=l.id;render()}
+function addShape(kind){save();let sq=kind==='square'||kind==='circle';
+  // Same fixed-position stacking issue as addText() above, for shapes added one after another.
+  var nShape=current().layers.filter(function(x){return x.type===kind}).length;
+  var offsetShape=(nShape%5)*5;
+  current().layers.push(layer(kind,{name:kind,x:25+offsetShape,y:25+offsetShape,w:sq?25:40,h:sq?25:18,fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,z:nextZ()}));state.selected=current().layers.at(-1).id;render()}
 function nextZ(){return Math.max(0,...current().layers.map(l=>l.z||0))+1}
 function getLayer(){updateAllGroupBounds();return current().layers.find(l=>l.id===state.selected)}
 function render(){renderPages();renderPageList();renderLayers();renderFrameList();syncControls();renderTrays()}
