@@ -235,7 +235,7 @@ async function handleStartTrial(request, env) {
     });
   }
 
-  const trialId = await mintTrial(env);
+  const trialId = await mintTrial(env, request.headers.get('CF-Connecting-IP') || 'unknown');
   const separator = redirectTo.includes('?') ? '&' : '?';
   return new Response(null, {
     status: 303,
@@ -396,15 +396,16 @@ async function getRawRecord(env, code) {
   }
 }
 
-async function mintTrial(env) {
+async function mintTrial(env, ip) {
   const id = 'trial_' + crypto.randomUUID().replace(/-/g, '');
   const now = Date.now();
   const expiresAt = now + TRIAL_DAYS * 24 * 60 * 60 * 1000;
-  const record = { type: 'trial', createdAt: now, expiresAt, revoked: false };
-  // Storing createdAt/expiresAt as KV metadata (not just inside the value) lets the
-  // stats page below count active-vs-expired trials, and list a timeline of when each
-  // one started, straight from list() results without a separate get() per trial.
-  await env.PP_LICENSES.put(id, JSON.stringify(record), { metadata: { createdAt: now, expiresAt } });
+  const record = { type: 'trial', createdAt: now, expiresAt, revoked: false, ip: ip || null };
+  // Storing createdAt/expiresAt/ip as KV metadata (not just inside the value) lets the
+  // stats page below count active-vs-expired trials, and list a timeline of when (and
+  // from where) each one started, straight from list() results without a separate
+  // get() per trial.
+  await env.PP_LICENSES.put(id, JSON.stringify(record), { metadata: { createdAt: now, expiresAt, ip: ip || null } });
   return id;
 }
 
@@ -679,8 +680,9 @@ async function handleStats(request, env) {
       totalTrials++;
       let expiresAt = key.metadata && key.metadata.expiresAt;
       let createdAt = key.metadata && key.metadata.createdAt;
-      if (expiresAt == null || createdAt == null) {
-        // Trials minted before the metadata fields existed - fall back to
+      let ip = key.metadata && key.metadata.ip;
+      if (expiresAt == null || createdAt == null || ip == null) {
+        // Trials minted before these metadata fields existed - fall back to
         // reading the value directly so old records still count/list correctly.
         const raw = await env.PP_LICENSES.get(key.name);
         if (raw) {
@@ -688,6 +690,7 @@ async function handleStats(request, env) {
             const parsed = JSON.parse(raw);
             if (expiresAt == null) expiresAt = parsed.expiresAt;
             if (createdAt == null) createdAt = parsed.createdAt;
+            if (ip == null) ip = parsed.ip;
           } catch (e) {}
         }
       }
@@ -696,7 +699,7 @@ async function handleStats(request, env) {
       // expiresAt so it still has a sensible spot in the timeline instead of being
       // dropped or sorting as if it started at the epoch.
       if (createdAt == null && expiresAt != null) createdAt = expiresAt - TRIAL_DAYS * 24 * 60 * 60 * 1000;
-      if (createdAt != null) timeline.push({ createdAt, active: !!(expiresAt && now < expiresAt) });
+      if (createdAt != null) timeline.push({ createdAt, active: !!(expiresAt && now < expiresAt), ip: ip || 'unknown' });
     }
     cursor = page.list_complete ? undefined : page.cursor;
   } while (cursor);
@@ -713,7 +716,7 @@ function statsPage(totalTrials, activeTrials, timeline) {
     .map((t) => {
       const d = new Date(t.createdAt);
       const when = d.toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' });
-      return `<tr><td>${when}</td><td>${t.active ? 'active' : 'expired'}</td></tr>`;
+      return `<tr><td>${when}</td><td>${escapeHtml(t.ip)}</td><td>${t.active ? 'active' : 'expired'}</td></tr>`;
     })
     .join('');
   return `<!doctype html>
@@ -742,12 +745,12 @@ ${BRAND_FONTS}
       <div class="stat"><b>${totalTrials}</b><span>trials started</span></div>
       <div class="stat"><b>${activeTrials}</b><span>active right now</span></div>
     </div>
-    <p style="margin:0;">"active" means still within their 7-day window, not necessarily online this second. No emails or personal data involved - this is just a timestamp of when each trial began.</p>
+    <p style="margin:0;">"active" means still within their 7-day window, not necessarily online this second. No emails collected - each row is just a timestamp and the connecting IP address.</p>
     <div class="timeline">
       <h2>trial start timeline</h2>
       ${
         timeline.length
-          ? `<div class="timeline-scroll"><table><thead><tr><th>started</th><th>status</th></tr></thead><tbody>${rows}</tbody></table></div>`
+          ? `<div class="timeline-scroll"><table><thead><tr><th>started</th><th>IP</th><th>status</th></tr></thead><tbody>${rows}</tbody></table></div>`
           : `<p style="margin:0;color:var(--muted-foreground);">No trials started yet.</p>`
       }
     </div>
