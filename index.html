@@ -82,9 +82,10 @@ main{width:100%;display:grid;grid-template-columns:300px minmax(0,1fr) 340px;min
 .layer.positionLocked::after{
   content:'🔒';
   position:absolute;top:4px;right:4px;
-  font-size:13px;line-height:1;
-  background:rgba(20,25,45,.82);border:1px solid rgba(255,255,255,.28);border-radius:50%;
-  width:22px;height:22px;display:grid;place-items:center;
+  font-size:18px;line-height:1;
+  background:rgba(255,171,15,.95);border:2px solid #7a4a00;border-radius:50%;
+  width:30px;height:30px;display:grid;place-items:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.35);
   pointer-events:none;z-index:10060;
 }
 .layer.positionLocked.selected{outline:2px dashed rgba(255,232,248,.55)!important;}
@@ -19371,10 +19372,13 @@ else install();
      signal the pink was even for). Locked now gets its own distinct amber colour, reserving
      pink for "selected" only, and unlocked gets a visibly dimmer/flatter chip so the two read
      as clearly different states without needing to read the tiny emoji at all. */
-  #layerList .layerItem.ppCleanThumbRow .lockBtn{background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,.14)!important;opacity:.68!important;}
-  #layerList .layerItem.ppCleanThumbRow .lockBtn.layerLocked{background:rgba(255,196,64,.30)!important;border:1px solid rgba(255,196,64,.85)!important;opacity:1!important;box-shadow:0 0 0 1px rgba(255,196,64,.18)!important;}
+  #layerList .layerItem.ppCleanThumbRow .lockBtn{background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,.14)!important;opacity:.68!important;font-size:15px!important;}
+  /* Real report: even the amber tint above was still too subtle to read at a glance while
+     actually trying to drag a layer - bump it to a solid, saturated fill plus a heavier border
+     and a bigger glyph so "locked" is unmistakable, not something you have to squint at. */
+  #layerList .layerItem.ppCleanThumbRow .lockBtn.layerLocked{background:rgba(255,171,15,.95)!important;border:2px solid #7a4a00!important;opacity:1!important;box-shadow:0 0 0 2px rgba(255,196,64,.35)!important;font-size:16px!important;}
   #layerList .layerItem.ppCleanThumbRow .lockBtnSpacer{width:26px!important;height:26px!important;}
-  #layerList .layerItem.ppCleanThumbRow.rowLocked{opacity:.72!important;}
+  #layerList .layerItem.ppCleanThumbRow.rowLocked{opacity:.72!important;border-left:3px solid rgba(255,171,15,.85)!important;}
   body.ppLayersWide #layerList .ppCleanLayerThumb{width:42px!important;height:42px!important;}
   body.ppLayersWide #layerList .layerItem.ppCleanThumbRow{grid-template-columns:22px 42px minmax(0,1fr) 28px 28px 28px!important;min-height:56px!important;}
 
