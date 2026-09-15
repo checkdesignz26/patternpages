@@ -2815,6 +2815,11 @@ function renderAutoGroupOverlay(stage,pi){
     if(!(e.target.closest && e.target.closest('.autoGroupHandle'))) return;
 
     if(state.handMode)return;
+    // Real report: "lock layer doesn't work anymore" - this auto-group resize handle never
+    // checked positionLocked at all, unlike the plain per-layer drag handler and the manual-group
+    // overlay right below it, which both already respect it. A locked pattern-collection/stash
+    // layer could still be resized here regardless of its lock state.
+    if(selected.positionLocked)return;
     save();
     state.selectedPage=pi;
     state.selected=selected.id;
