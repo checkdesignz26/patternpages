@@ -401,10 +401,10 @@ async function mintTrial(env) {
   const now = Date.now();
   const expiresAt = now + TRIAL_DAYS * 24 * 60 * 60 * 1000;
   const record = { type: 'trial', createdAt: now, expiresAt, revoked: false };
-  // Storing expiresAt as KV metadata (not just inside the value) lets the
-  // stats page below count active-vs-expired trials straight from list()
-  // results, without a separate get() per trial.
-  await env.PP_LICENSES.put(id, JSON.stringify(record), { metadata: { expiresAt } });
+  // Storing createdAt/expiresAt as KV metadata (not just inside the value) lets the
+  // stats page below count active-vs-expired trials, and list a timeline of when each
+  // one started, straight from list() results without a separate get() per trial.
+  await env.PP_LICENSES.put(id, JSON.stringify(record), { metadata: { createdAt: now, expiresAt } });
   return id;
 }
 
@@ -671,33 +671,51 @@ async function handleStats(request, env) {
   const now = Date.now();
   let totalTrials = 0;
   let activeTrials = 0;
+  const timeline = [];
   let cursor;
   do {
     const page = await env.PP_LICENSES.list({ prefix: 'trial_', cursor });
     for (const key of page.keys) {
       totalTrials++;
       let expiresAt = key.metadata && key.metadata.expiresAt;
-      if (expiresAt == null) {
-        // Trials minted before the metadata field existed - fall back to
-        // reading the value directly so old records still count correctly.
+      let createdAt = key.metadata && key.metadata.createdAt;
+      if (expiresAt == null || createdAt == null) {
+        // Trials minted before the metadata fields existed - fall back to
+        // reading the value directly so old records still count/list correctly.
         const raw = await env.PP_LICENSES.get(key.name);
         if (raw) {
           try {
-            expiresAt = JSON.parse(raw).expiresAt;
+            const parsed = JSON.parse(raw);
+            if (expiresAt == null) expiresAt = parsed.expiresAt;
+            if (createdAt == null) createdAt = parsed.createdAt;
           } catch (e) {}
         }
       }
       if (expiresAt && now < expiresAt) activeTrials++;
+      // A pre-metadata trial with no stored createdAt at all - approximate it from
+      // expiresAt so it still has a sensible spot in the timeline instead of being
+      // dropped or sorting as if it started at the epoch.
+      if (createdAt == null && expiresAt != null) createdAt = expiresAt - TRIAL_DAYS * 24 * 60 * 60 * 1000;
+      if (createdAt != null) timeline.push({ createdAt, active: !!(expiresAt && now < expiresAt) });
     }
     cursor = page.list_complete ? undefined : page.cursor;
   } while (cursor);
+  timeline.sort((a, b) => b.createdAt - a.createdAt);
 
-  return new Response(statsPage(totalTrials, activeTrials), {
+  return new Response(statsPage(totalTrials, activeTrials, timeline), {
     headers: { 'content-type': 'text/html; charset=utf-8' },
   });
 }
 
-function statsPage(totalTrials, activeTrials) {
+function statsPage(totalTrials, activeTrials, timeline) {
+  timeline = timeline || [];
+  const rows = timeline
+    .map((t) => {
+      const d = new Date(t.createdAt);
+      const when = d.toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' });
+      return `<tr><td>${when}</td><td>${t.active ? 'active' : 'expired'}</td></tr>`;
+    })
+    .join('');
   return `<!doctype html>
 <html>
 <head>
@@ -709,16 +727,30 @@ ${BRAND_FONTS}
   .stats-grid{display:flex;gap:1.5rem;justify-content:center;margin:0.5rem 0 1.25rem;}
   .stat b{display:block;font-family:var(--font-display);font-size:2.75rem;line-height:1;}
   .stat span{color:var(--muted-foreground);font-size:0.9rem;}
+  .timeline{margin-top:1.5rem;text-align:left;}
+  .timeline h2{font-family:var(--font-display);font-size:1.4rem;margin:0 0 0.5rem;}
+  .timeline-scroll{max-height:360px;overflow-y:auto;border:1px solid rgba(0,0,0,0.12);border-radius:12px;}
+  .timeline table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+  .timeline th,.timeline td{padding:0.45rem 0.7rem;text-align:left;border-bottom:1px solid rgba(0,0,0,0.08);}
+  .timeline th{position:sticky;top:0;background:var(--card,#fff);}
 </style>
 </head>
 <body>
-  <div class="card" style="max-width:420px;">
+  <div class="card" style="max-width:480px;">
     <h1>trial stats</h1>
     <div class="stats-grid">
       <div class="stat"><b>${totalTrials}</b><span>trials started</span></div>
       <div class="stat"><b>${activeTrials}</b><span>active right now</span></div>
     </div>
-    <p style="margin:0;">"active" means still within their 7-day window, not necessarily online this second. No emails or personal data involved.</p>
+    <p style="margin:0;">"active" means still within their 7-day window, not necessarily online this second. No emails or personal data involved - this is just a timestamp of when each trial began.</p>
+    <div class="timeline">
+      <h2>trial start timeline</h2>
+      ${
+        timeline.length
+          ? `<div class="timeline-scroll"><table><thead><tr><th>started</th><th>status</th></tr></thead><tbody>${rows}</tbody></table></div>`
+          : `<p style="margin:0;color:var(--muted-foreground);">No trials started yet.</p>`
+      }
+    </div>
   </div>
 </body>
 </html>`;
