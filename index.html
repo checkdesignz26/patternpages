@@ -1655,7 +1655,7 @@ body.theme-light .swbResizeHandle::after{
     <span>Upload patterns, choose a page size, then build your layout with frames, strips and labels.</span>
   </div>
   <div class="box trayTop"><h2>pattern tray</h2><div class="panelBody"><input id="patternInput" class="hidden" type="file" accept="image/*" multiple onchange="loadTray(event,'pattern')"><button class="full primary" onclick="patternInput.click()" title="Add your own pattern images to the tray below">upload patterns</button><p class="smallText">Patterns live here. Choose a pattern, select a layout slot on the canvas, then fill that exact slot.</p><div id="patternTray" class="thumbGrid"></div><div class="grid2"><button onclick="placePatternOnPage()" title="Add the selected pattern as a new layer on the page">place pattern</button><button onclick="fillSelectedFrame()" title="Fill the currently selected frame or slot with the selected pattern">fill selected slot</button></div><div class="grid2"><button class="primary" onclick="magicFillEmptySlots()" title="Fill every empty slot at once with patterns from the tray">✨ fill all empty</button><button onclick="replaceAllShowcaseSlots()" title="Replace every filled slot with the selected pattern">replace all</button></div></div></div>
-  <div class="box trayTop"><h2>pattern showcase</h2><div class="panelBody"><p class="smallText"><strong>Generate a clean layout.</strong> Your patterns stay in the Pattern Tray until you choose where they go.</p><div class="showcaseTypeGrid" role="radiogroup" aria-label="layout type"><button id="showcaseStripsBtn" class="active" onclick="chooseShowcaseLayout('strips')" title="Arrange the showcase as full-width strips">strips</button><button id="showcaseSquaresBtn" onclick="chooseShowcaseLayout('squares')" title="Arrange the showcase as an even grid of squares">squares</button><button id="showcaseRectanglesBtn" onclick="chooseShowcaseLayout('rectangles')" title="Arrange the showcase as a grid of rectangles">rectangles</button><button id="showcaseCirclesBtn" onclick="chooseShowcaseLayout('circles')" title="Arrange the showcase as a grid of circles">circles</button></div><div id="stripDirectionControls" class="stripDirectionBox">
+  <div class="box trayTop"><h2>pattern showcase</h2><div class="panelBody"><p class="smallText"><strong>Generate a clean layout.</strong> Your patterns stay in the Pattern Tray until you choose where they go.</p><div class="showcaseTypeGrid" role="radiogroup" aria-label="layout type"><button id="showcaseStripsBtn" class="active" onclick="chooseShowcaseLayout('strips')" title="Arrange the showcase as full-width strips">strips</button><button id="showcaseSquaresBtn" onclick="chooseShowcaseLayout('squares')" title="Arrange the showcase as an even grid of squares">squares</button><button id="showcaseRectanglesBtn" onclick="chooseShowcaseLayout('rectangles')" title="Arrange the showcase as a grid of rectangles">rectangles</button><button id="showcaseCirclesBtn" onclick="chooseShowcaseLayout('circles')" title="Arrange the showcase as a grid of circles">circles</button><button id="showcaseCollageBtn" onclick="chooseShowcaseLayout('collage')" title="Arrange the showcase as an overlapping photo collage">collage</button></div><div id="stripDirectionControls" class="stripDirectionBox">
   <div class="stripDirectionTitle">strip direction</div>
   <div class="stripDirectionGrid" role="radiogroup" aria-label="strip direction">
     <button id="stripDirVerticalBtn" class="active" type="button" onclick="stripDirection='vertical';chooseStripDirection('vertical')" title="Stack strips side by side">vertical</button>
@@ -1684,7 +1684,7 @@ body.theme-light .swbResizeHandle::after{
     <p class="mockupTinyNote">White mask area fills with the selected pattern. The new live mock-up stays editable with the sliders after creation.</p>
   </div></div>
 
-  <div class="box trayTop"><h2>images & mock-ups</h2><input id="assetInput" class="hidden" type="file" accept="image/*" multiple onchange="loadTray(event,'asset')"><input id="mockupInput" class="hidden" type="file" accept="image/*" onchange="createMockupPage(event)"><input id="imageLayerInput" class="hidden" type="file" accept="image/*" onchange="addUploadedImageLayer(event)"><button class="full" onclick="assetInput.click()" title="Add your own images, banners or mock-up backgrounds to the tray">Upload Design Assets</button><div id="assetTray" class="thumbGrid"></div><div class="grid2"><button onclick="addImageLayer('image')" title="Add the selected asset as an image layer on the page">add selected image</button><button onclick="mockupInput.click()" title="Create a new page from an uploaded mock-up photo">mock-up page</button></div><div class="grid2"><button onclick="addImageLayer('banner')" title="Add a wide banner image layer">banner</button><button onclick="addImageLayer('overlay')" title="Add a full-page overlay image layer">overlay</button></div><div class="aiDisclosureControls"><label class="checkRow"><input id="aiDisclosureToggle" type="checkbox" checked>add movable “AI generated” badge to mock-up</label><button class="full" onclick="addAIDisclosureBadge()" title="Add a movable &quot;AI generated&quot; disclosure badge">add AI generated badge</button><p class="smallText">Subtle white pill with fixed soft-grey text. Resize the badge shape, but the words stay readable.</p></div><p class="smallText">One tray for images, banners and mock-ups. Images now arrive at a useful page size instead of tiny; resize them afterwards if needed.</p></div>
+  <div class="box trayTop"><h2>images & mock-ups</h2><input id="assetInput" class="hidden" type="file" accept="image/*" multiple onchange="loadTray(event,'asset')"><input id="mockupInput" class="hidden" type="file" accept="image/*" onchange="createMockupPage(event)"><input id="imageLayerInput" class="hidden" type="file" accept="image/*" onchange="addUploadedImageLayer(event)"><button class="full" onclick="assetInput.click()" title="Add your own images, banners or mock-up backgrounds to the tray">Upload Design Assets</button><div id="assetTray" class="thumbGrid"></div><div class="grid2"><button onclick="addImageLayer('image')" title="Add the selected asset as an image layer on the page">add selected image</button><button onclick="mockupInput.click()" title="Create a new page from an uploaded mock-up photo">mock-up page</button></div><div class="grid2"><button onclick="addImageLayer('banner')" title="Add a wide banner image layer">banner</button><button onclick="addImageLayer('overlay')" title="Add a full-page overlay image layer">overlay</button></div><div class="grid2"><button onclick="fillSelectedFrame()" title="Fill the currently selected showcase slot with the selected image - handy for a collage layout">fill selected slot</button><button class="primary" onclick="magicFillEmptySlots()" title="Fill every empty showcase slot at once with the selected image">✨ fill all empty</button></div><div class="aiDisclosureControls"><label class="checkRow"><input id="aiDisclosureToggle" type="checkbox" checked>add movable “AI generated” badge to mock-up</label><button class="full" onclick="addAIDisclosureBadge()" title="Add a movable &quot;AI generated&quot; disclosure badge">add AI generated badge</button><p class="smallText">Subtle white pill with fixed soft-grey text. Resize the badge shape, but the words stay readable.</p></div><p class="smallText">One tray for images, banners and mock-ups. Images now arrive at a useful page size instead of tiny; resize them afterwards if needed.</p></div>
   <!-- Hidden ahead of launch at the maker's request - the feature isn't behaving quite as
        intended yet and needs more work. The code, tests and Button Guide entry are untouched;
        to bring it back, just delete the #batchListingSetBox{display:none} rule below. -->
@@ -4580,6 +4580,7 @@ const SWATCHBOOK_DATA = [
     ["squares", "Arrange the showcase as an even grid of squares."],
     ["rectangles", "Arrange the showcase as a grid of rectangles."],
     ["circles", "Arrange the showcase as a grid of circles."],
+    ["collage", "Arrange the showcase as an overlapping, slightly tilted photo collage &mdash; great for mock-up photos, not just patterns."],
     ["vertical", "Stack strips side by side."],
     ["horizontal stash", "Stack strips edge to edge, like a folded fabric stash."],
     ["&minus; / + (number of slots)", "Remove or add a pattern slot."],
@@ -6238,6 +6239,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 /* Clean Pattern Showcase generator — one simple control, no extra trays */
 .showcaseTypeGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0 10px}
+.showcaseTypeGrid button:last-child:nth-child(odd){grid-column:1/-1}
 .showcaseTypeGrid button{min-height:38px;text-align:center;font-size:12px!important}
 .showcaseTypeGrid button.active{outline:2px solid rgba(255,142,214,.8)!important;background:linear-gradient(90deg,rgba(155,107,255,.34),rgba(255,142,214,.24))!important}
 .frameStepper{display:grid;grid-template-columns:34px 1fr 34px;gap:6px;align-items:center}
@@ -15596,9 +15598,9 @@ window.addEventListener('DOMContentLoaded',function(){
   // chooseStripDirection had earlier generations here; all are superseded further down the file.
   // chooseShowcaseLayout has no later generation, so it's still the live one.
   window.chooseShowcaseLayout=function(t){
-    t=['strips','squares','rectangles','circles'].indexOf(t)>=0?t:'strips';
+    t=['strips','squares','rectangles','circles','collage'].indexOf(t)>=0?t:'strips';
     try{showcaseLayoutType=t;}catch(e){}window.showcaseLayoutType=t;
-    ['Strips','Squares','Rectangles','Circles'].forEach(function(name){var b=byId('showcase'+name+'Btn');if(b)b.classList.toggle('active',name.toLowerCase()===t);});
+    ['Strips','Squares','Rectangles','Circles','Collage'].forEach(function(name){var b=byId('showcase'+name+'Btn');if(b)b.classList.toggle('active',name.toLowerCase()===t);});
     syncUI();
   };
   function install(){
@@ -17161,7 +17163,14 @@ window.generatePatternShowcaseLayout=function(){
     normaliseSelection();
     if(selected.length) return selected.slice();
     var s=S(),ps=patternList(),i=s&&s.selectedTray&&Number.isInteger(s.selectedTray.pattern)?s.selectedTray.pattern:-1;
-    return i>-1&&ps[i]&&ps[i].src?[ps[i].src]:[];
+    if(i>-1&&ps[i]&&ps[i].src) return [ps[i].src];
+    // Nothing picked from the Pattern Tray - fall back to whatever's selected in
+    // the plain Asset Tray (normal photos/mock-ups), so a showcase slot can be
+    // filled with a real photo too, not only a seamless pattern tile. Collage
+    // layouts especially are meant for exactly this.
+    var as=s&&s.trays&&Array.isArray(s.trays.asset)?s.trays.asset:[],
+        ai=s&&s.selectedTray&&Number.isInteger(s.selectedTray.asset)?s.selectedTray.asset:-1;
+    return ai>-1&&as[ai]&&as[ai].src?[as[ai].src]:[];
   }
   function commitOnce(selectId){
     var s=S(); if(s&&selectId!=null) s.selected=selectId;
@@ -17174,7 +17183,7 @@ window.generatePatternShowcaseLayout=function(){
   window.fillSelectedFrame=function(){
     var l=selectedSlot(),srcs=chosenSources();
     if(!l){alert('Tap one showcase slot so it highlights first.');return;}
-    if(!srcs.length){alert('Choose at least one pattern from the Pattern Tray first.');return;}
+    if(!srcs.length){alert('Choose a pattern or an image first.');return;}
     saveOnce(); l.src=srcs[srcs.length-1]; l.fit='cover'; commitOnce(l.id);
   };
   // NOTE(consolidation): magicFillEmptySlots and replaceAllShowcaseSlots had earlier generations
@@ -17271,7 +17280,11 @@ window.generatePatternShowcaseLayout=function(){
     }).filter(function(x){return x.src;}).sort(function(a,b){return a.n-b.n;}).map(function(x){return x.src;});
     if(badges.length) return badges;
     var s=S(), ps=s&&s.trays&&Array.isArray(s.trays.pattern)?s.trays.pattern:[], i=s&&s.selectedTray&&Number.isInteger(s.selectedTray.pattern)?s.selectedTray.pattern:-1;
-    return i>-1&&ps[i]&&ps[i].src?[ps[i].src]:[];
+    if(i>-1&&ps[i]&&ps[i].src) return [ps[i].src];
+    // Same Asset Tray fallback as the single-slot fill above - a selected photo
+    // can seed every empty slot, not just a pattern-tray tile.
+    var as=s&&s.trays&&Array.isArray(s.trays.asset)?s.trays.asset:[], ai=s&&s.selectedTray&&Number.isInteger(s.selectedTray.asset)?s.selectedTray.asset:-1;
+    return ai>-1&&as[ai]&&as[ai].src?[as[ai].src]:[];
   }
   function saveOnce(){try{if(typeof save==='function')save();}catch(e){}}
   function renderOnce(selectId){var s=S();if(s&&selectId!=null)s.selected=selectId;try{if(typeof render==='function')render();else if(typeof renderPages==='function')renderPages();}catch(e){}try{if(typeof autosaveSoon==='function')autosaveSoon();}catch(e){}}
@@ -17279,7 +17292,7 @@ window.generatePatternShowcaseLayout=function(){
   window.magicFillEmptySlots=function(){
     var p=currentPage(),srcs=selectedSources();
     if(!p){alert('Add or select a page first.');return;}
-    if(!srcs.length){alert('Choose one or more patterns from the Pattern Tray first.');return;}
+    if(!srcs.length){alert('Choose one or more patterns or images first.');return;}
     var all=slotList(p), targets=all.filter(function(l){return !l.src;});
     if(!targets.length){
       if(!confirm('Every showcase slot is already filled. Replace all patterns?')) return;
@@ -17294,7 +17307,7 @@ window.generatePatternShowcaseLayout=function(){
   window.replaceAllShowcaseSlots=function(){
     var p=currentPage(),srcs=selectedSources(),targets=slotList(p);
     if(!p){alert('Add or select a page first.');return;}
-    if(!srcs.length){alert('Choose one or more patterns from the Pattern Tray first.');return;}
+    if(!srcs.length){alert('Choose one or more patterns or images first.');return;}
     if(!targets.length){alert('Generate a Pattern Showcase first.');return;}
     saveOnce();targets.forEach(function(l,i){l.src=srcs[i%srcs.length];l.fit='cover';l.filledSlot=true;});
     renderOnce(targets[0].id);afterRender(targets.map(function(l){return l.id;}),targets.length);
@@ -20861,6 +20874,13 @@ else install();
   function freshLayer(type,props){try{return layer(type,props);}catch(e){return Object.assign({id:'l'+Date.now()+Math.random().toString(36).slice(2),type:type},props);}}
   function ordered(){return getSlots().slice().sort(function(a,b){return (a.stackIndex||0)-(b.stackIndex||0)||(a.y-b.y)||(a.x-b.x);});}
   function shapeFor(t){return t==='strips'?'strip':t==='rectangles'?'rectangle':t==='circles'?'circle':'square';}
+  // Collage tiles are deliberately given the plain 'square' slotShape (not a new
+  // value of their own) so every existing whitelist that already knows about
+  // square/rectangle slots - the whole-showcase scale/move sliders
+  // (isScalableShowcaseSlot/isShowcaseSlot), the export's per-shape draw, the
+  // layer-panel naming and thumbnails - picks collage tiles up for free. The
+  // separate l.collageTile flag below is only for cosmetics (the collapsed
+  // layers-panel group label).
   function reuse(old,i,t,props){
     var shape=shapeFor(t), l=old&&old.slotShape===shape?old:freshLayer(t==='strips'?'strip':'card',{});
     var id=l.id,src=l.src||null,fit=l.fit||'cover';
@@ -20926,6 +20946,25 @@ else install();
         var tx=sx+c*(tw+gapR),ty=sy+r*(blockH+gapR);
         made.push(reuse(old[i],i,t,{x:tx,y:ty,w:tw,h:th,z:z(i)}));
         if(addCaptions) capMade.push(reuseCaption(oldCaptions[i],i,tx,ty+th+capGap,tw,capH));
+      }
+    }else if(t==='collage'){
+      /* Scrapbook-style overlap: same grid math as squares/circles below, but each
+         tile is drawn a bit larger than its own cell (so neighbours overlap) and
+         nudged/tilted by a small deterministic offset keyed on its index - not
+         Math.random() - so pressing "update layout" again (same count, e.g. after
+         just resizing the whole showcase) doesn't reshuffle which photo sits where. */
+      var ccC=Math.ceil(Math.sqrt(n)),rrC=Math.ceil(n/ccC),gC=2,awC=90,ahC=80;
+      var pageRatioC=(p.w&&p.h)?p.w/p.h:1.333;
+      var swC=Math.max(4,Math.min((awC-gC*(ccC-1))/ccC,((ahC-gC*(rrC-1)-capExtra*rrC)/rrC)/pageRatioC));
+      var shC=swC*pageRatioC,blockHC=shC+capExtra,overlap=1.24;
+      var x0C=(100-(ccC*swC+(ccC-1)*gC))/2,y0C=(100-(rrC*blockHC+(rrC-1)*gC))/2;
+      for(i=0;i<n;i++){
+        var rowC=Math.floor(i/ccC),colC=i%ccC;
+        var cx=x0C+colC*(swC+gC)+swC/2,cy=y0C+rowC*(blockHC+gC)+shC/2;
+        var jx=((i*53)%13-6)*0.4,jy=((i*29)%11-5)*0.4,rot=((i*37)%17-8);
+        var tw3=swC*overlap,th3=shC*overlap;
+        made.push(reuse(old[i],i,t,{x:cx+jx-tw3/2,y:cy+jy-th3/2,w:tw3,h:th3,r:rot,z:z(i),collageTile:true}));
+        if(addCaptions) capMade.push(reuseCaption(oldCaptions[i],i,cx-swC/2,cy+shC/2+capGap,swC,capH));
       }
     }else{
       var cc=Math.ceil(Math.sqrt(n)),rr=Math.ceil(n/cc),g=3,aw=86,ah=78;
@@ -21043,6 +21082,7 @@ else install();
   function normalLayers(){return allLayers().filter(function(l){return l&&!l.generatedPatternLayout;});}
   function typeLabel(list){
     if(!list.length)return 'showcase';
+    if(list[0].collageTile)return 'collage';
     var shape=list[0].slotShape||'pattern';
     if(shape==='circle')return 'circles';
     if(shape==='rectangle')return 'rectangles';
