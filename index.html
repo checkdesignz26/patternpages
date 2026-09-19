@@ -21050,7 +21050,7 @@ else install();
 <style id="ppages-collage-template-picker-css">
   #frameCountRow.showcaseHidden{display:none!important;}
   #collageTemplateRow.showcaseHidden{display:none!important;}
-  .collageTemplateGrid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin:6px 0 2px}
+  .collageTemplateGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:6px 0 2px}
   .collageTemplateBtn{
     padding:5px!important;min-height:0!important;display:flex!important;
     align-items:center;justify-content:center;background:rgba(255,255,255,.06)!important;
@@ -21076,9 +21076,10 @@ else install();
     'quadrants':{cols:2,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1}]},
     'thirds':{cols:3,rows:1,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1}]},
     'big-plus-three':{cols:2,rows:3,cells:[{c:0,r:0,cw:1,rh:3},{c:1,r:0,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:1,r:2,cw:1,rh:1}]},
-    'grid-six':{cols:3,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1}]}
+    'grid-six':{cols:3,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1}]},
+    'grid-nine':{cols:3,rows:3,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1},{c:0,r:2,cw:1,rh:1},{c:1,r:2,cw:1,rh:1},{c:2,r:2,cw:1,rh:1}]}
   };
-  var TEMPLATE_ORDER=['halves-v','halves-h','big-left','big-top','quadrants','thirds','big-plus-three','grid-six'];
+  var TEMPLATE_ORDER=['halves-v','halves-h','big-left','big-top','quadrants','thirds','big-plus-three','grid-six','grid-nine'];
 
   // Shared by rebuild()'s collage branch (page-percentage rects, real gutter) and
   // the little icon previews below (0-100 icon-space rects, a bigger relative
