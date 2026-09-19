@@ -1662,7 +1662,7 @@ body.theme-light .swbResizeHandle::after{
     <button id="stripDirHorizontalBtn" type="button" onclick="stripDirection='horizontal';chooseStripDirection('horizontal')" title="Stack strips edge to edge like a folded fabric stash">horizontal stash</button>
   </div>
   <p class="smallText">Horizontal stash stacks full-width fabric strips with stronger shadows.</p>
-</div><div class="frameCountRow"><label>number of slots</label><div class="frameStepper" aria-label="number of pattern slots"><button type="button" onclick="changeFrameCount(-1)" title="Remove a pattern slot">−</button><span id="cardCountDisplay">1</span><button type="button" onclick="changeFrameCount(1)" title="Add a pattern slot">+</button><input id="cardCount" type="hidden" value="1"></div></div><label class="checkRow" id="showcaseCaptionRow"><input id="showcaseAddCaptions" type="checkbox">add a caption below each shape</label><button class="full primary" onclick="generateSelectedShowcaseLayout()" title="Build or rebuild the showcase with the chosen layout and slot count">generate layout</button><p class="smallText">After generating: tap a strip, tile, rectangle or circle so it highlights, then choose a pattern from the tray and tap <strong>fill selected slot</strong>.</p></div></div>
+</div><div class="frameCountRow" id="frameCountRow"><label>number of slots</label><div class="frameStepper" aria-label="number of pattern slots"><button type="button" onclick="changeFrameCount(-1)" title="Remove a pattern slot">−</button><span id="cardCountDisplay">1</span><button type="button" onclick="changeFrameCount(1)" title="Add a pattern slot">+</button><input id="cardCount" type="hidden" value="1"></div></div><div id="collageTemplateRow" class="showcaseHidden"><label>collage template</label><div id="collageTemplateGrid" class="collageTemplateGrid"></div></div><label class="checkRow" id="showcaseCaptionRow"><input id="showcaseAddCaptions" type="checkbox">add a caption below each shape</label><button class="full primary" onclick="generateSelectedShowcaseLayout()" title="Build or rebuild the showcase with the chosen layout and slot count">generate layout</button><p class="smallText">After generating: tap a strip, tile, rectangle or circle so it highlights, then choose a pattern from the tray and tap <strong>fill selected slot</strong>.</p></div></div>
   <div class="box trayTop frameWowBox"><h2>frames</h2><div class="panelBody"><p class="smallText"><strong>Add a pattern frame.</strong> Choose a built-in shape or add your own PNG shape with transparency, then fill it from the Pattern Tray.</p><button class="full primary" onclick="toggleFramePicker()" title="Choose a built-in shape or upload your own PNG frame">add frame</button><div id="framePicker" class="framePicker hidden"><div class="framePickerTitle">built-in frames</div><div class="frameShapeGrid"><button onclick="addPatternFrame('flower')" title="Add a flower-shaped pattern frame">✿<span>flower</span></button><button onclick="addPatternFrame('heart')" title="Add a heart-shaped pattern frame">♥<span>heart</span></button><button onclick="addPatternFrame('star')" title="Add a star-shaped pattern frame">★<span>star</span></button><button onclick="addPatternFrame('circle')" title="Add a circle-shaped pattern frame">●<span>circle</span></button><button onclick="addPatternFrame('arch')" title="Add an arch-shaped pattern frame">⌒<span>arch</span></button><button onclick="addPatternFrame('label')" title="Add a rectangular label-shaped pattern frame">▭<span>label</span></button></div><div class="framePickerTitle">custom frame</div><input id="customFrameInput" class="hidden" type="file" accept="image/png,image/*" onchange="addCustomFrameFromPNG(event)"><button class="full" onclick="customFrameInput.click()" title="Upload a PNG shape with a transparent background to use as a custom frame">add your PNG</button><p class="smallText">Tip: use a PNG shape with a transparent background. Pattern Pages turns the visible shape into a fillable frame.</p></div></div></div>
 
 
@@ -15592,6 +15592,7 @@ window.addEventListener('DOMContentLoaded',function(){
     if(h)h.classList.toggle('active',t==='strips'&&direction()==='horizontal');
     var gen=byId('showcaseGenerateBtn');if(gen)gen.textContent=hasShowcase()?'update layout':'generate layout';
     var del=byId('showcaseDeleteBtn');if(del)del.disabled=!hasShowcase();
+    try{if(typeof window.ppSyncCollageTemplateRow==='function')window.ppSyncCollageTemplateRow();}catch(e){}
     var capRow=byId('showcaseCaptionRow');if(capRow)capRow.classList.toggle('showcaseHidden',t==='strips');
   }
   // NOTE(consolidation): deletePatternShowcase/changeFrameCount/generateSelectedShowcaseLayout/
@@ -20948,23 +20949,20 @@ else install();
         if(addCaptions) capMade.push(reuseCaption(oldCaptions[i],i,tx,ty+th+capGap,tw,capH));
       }
     }else if(t==='collage'){
-      /* Scrapbook-style overlap: same grid math as squares/circles below, but each
-         tile is drawn a bit larger than its own cell (so neighbours overlap) and
-         nudged/tilted by a small deterministic offset keyed on its index - not
-         Math.random() - so pressing "update layout" again (same count, e.g. after
-         just resizing the whole showcase) doesn't reshuffle which photo sits where. */
-      var ccC=Math.ceil(Math.sqrt(n)),rrC=Math.ceil(n/ccC),gC=2,awC=90,ahC=80;
-      var pageRatioC=(p.w&&p.h)?p.w/p.h:1.333;
-      var swC=Math.max(4,Math.min((awC-gC*(ccC-1))/ccC,((ahC-gC*(rrC-1)-capExtra*rrC)/rrC)/pageRatioC));
-      var shC=swC*pageRatioC,blockHC=shC+capExtra,overlap=1.24;
-      var x0C=(100-(ccC*swC+(ccC-1)*gC))/2,y0C=(100-(rrC*blockHC+(rrC-1)*gC))/2;
-      for(i=0;i<n;i++){
-        var rowC=Math.floor(i/ccC),colC=i%ccC;
-        var cx=x0C+colC*(swC+gC)+swC/2,cy=y0C+rowC*(blockHC+gC)+shC/2;
-        var jx=((i*53)%13-6)*0.4,jy=((i*29)%11-5)*0.4,rot=((i*37)%17-8);
-        var tw3=swC*overlap,th3=shC*overlap;
-        made.push(reuse(old[i],i,t,{x:cx+jx-tw3/2,y:cy+jy-th3/2,w:tw3,h:th3,r:rot,z:z(i),collageTile:true}));
-        if(addCaptions) capMade.push(reuseCaption(oldCaptions[i],i,cx-swC/2,cy+shC/2+capGap,swC,capH));
+      /* Clean, tight grid-template collage (à la classic photo-collage-maker apps):
+         a fixed set of asymmetric cells - not an auto-packed grid - picked by the
+         user from the template swatches (window.PP_COLLAGE_TEMPLATES), with a
+         small even gutter and square corners. No rotation, no overlap. The slot
+         count is dictated entirely by the chosen template, not by the +/- stepper
+         (that stepper/n is hidden for this layout type - see the collageTemplateRow
+         show/hide in syncUI()). */
+      var tmplId=window.showcaseCollageTemplateId||'quadrants';
+      var tmpl=(window.PP_COLLAGE_TEMPLATES&&window.PP_COLLAGE_TEMPLATES[tmplId])||(window.PP_COLLAGE_TEMPLATES&&window.PP_COLLAGE_TEMPLATES.quadrants);
+      var cells=tmpl?window.ppCollageCellRects(tmpl,addCaptions?capExtra:0):[];
+      for(i=0;i<cells.length;i++){
+        var cellC=cells[i];
+        made.push(reuse(old[i],i,t,{x:cellC.x,y:cellC.y,w:cellC.w,h:cellC.h,r:0,z:z(i),collageTile:true,collageTemplateId:tmplId}));
+        if(addCaptions) capMade.push(reuseCaption(oldCaptions[i],i,cellC.x,cellC.y+cellC.h+capGap,cellC.w,capH));
       }
     }else{
       var cc=Math.ceil(Math.sqrt(n)),rr=Math.ceil(n/cc),g=3,aw=86,ah=78;
@@ -21033,11 +21031,122 @@ else install();
     var gen=byId('showcaseGenerateBtn');if(gen)gen.textContent=getSlots().length?'update layout':'generate layout';
     var rem=byId('showcaseRemoveBtn');if(rem)rem.disabled=!getSlots().length;
     var capRow=byId('showcaseCaptionRow');if(capRow)capRow.classList.toggle('showcaseHidden',t==='strips');
+    try{if(typeof window.ppSyncCollageTemplateRow==='function')window.ppSyncCollageTemplateRow();}catch(e){}
   }
   var oldRender=window.render;
   if(typeof oldRender==='function')window.render=function(){var r=oldRender.apply(this,arguments);setTimeout(install,0);return r;};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
   setTimeout(install,300);setTimeout(install,1200);
+})();
+</script>
+
+<!-- Pattern Pages — clean grid-template collage picker for the Pattern Showcase.
+     A handful of fixed asymmetric layouts (à la classic photo-collage apps): tight,
+     even gutters, square corners, no rotation or overlap - tap a template to apply
+     it straight away. Slot count comes entirely from the chosen template, so the
+     ordinary +/- "number of slots" stepper is hidden while this layout is active
+     (see #frameCountRow/#collageTemplateRow, toggled by ppSyncCollageTemplateRow()
+     from both of the showcase panel's syncUI() generations). -->
+<style id="ppages-collage-template-picker-css">
+  #frameCountRow.showcaseHidden{display:none!important;}
+  #collageTemplateRow.showcaseHidden{display:none!important;}
+  .collageTemplateGrid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin:6px 0 2px}
+  .collageTemplateBtn{
+    padding:5px!important;min-height:0!important;display:flex!important;
+    align-items:center;justify-content:center;background:rgba(255,255,255,.06)!important;
+  }
+  .collageTemplateBtn.active{outline:2px solid rgba(255,142,214,.8)!important;background:linear-gradient(90deg,rgba(155,107,255,.34),rgba(255,142,214,.24))!important}
+  .collageTemplateIcon{position:relative;width:34px;height:34px}
+  .collageTemplateIcon span{position:absolute;background:currentColor;opacity:.82;border-radius:1px}
+</style>
+<script id="ppages-collage-template-picker-js">
+(function(){
+  'use strict';
+  if(window.__PP_COLLAGE_TEMPLATE_PICKER__) return;
+  window.__PP_COLLAGE_TEMPLATE_PICKER__=true;
+
+  // Each template is a small grid spec: `cols`/`rows` describe a uniform grid,
+  // and each cell can span more than one column/row (cw/rh) to make the classic
+  // asymmetric splits (one big photo + a couple of small ones, etc).
+  window.PP_COLLAGE_TEMPLATES={
+    'halves-v':{cols:2,rows:1,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1}]},
+    'halves-h':{cols:1,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1}]},
+    'big-left':{cols:2,rows:2,cells:[{c:0,r:0,cw:1,rh:2},{c:1,r:0,cw:1,rh:1},{c:1,r:1,cw:1,rh:1}]},
+    'big-top':{cols:2,rows:2,cells:[{c:0,r:0,cw:2,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1}]},
+    'quadrants':{cols:2,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1}]},
+    'thirds':{cols:3,rows:1,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1}]},
+    'big-plus-three':{cols:2,rows:3,cells:[{c:0,r:0,cw:1,rh:3},{c:1,r:0,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:1,r:2,cw:1,rh:1}]},
+    'grid-six':{cols:3,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1}]}
+  };
+  var TEMPLATE_ORDER=['halves-v','halves-h','big-left','big-top','quadrants','thirds','big-plus-three','grid-six'];
+
+  // Shared by rebuild()'s collage branch (page-percentage rects, real gutter) and
+  // the little icon previews below (0-100 icon-space rects, a bigger relative
+  // gutter so the split reads clearly at 34px) - same cols/rows/cell spans, two
+  // different areas/gutters, so an icon always matches what actually gets built.
+  function cellRects(tmpl,areaX,areaY,areaW,areaH,g,extraPerRow){
+    var cols=tmpl.cols,rows=tmpl.rows;
+    var colW=(areaW-g*(cols-1))/cols;
+    var rowH=(areaH-g*(rows-1)-(extraPerRow||0)*rows)/rows;
+    return tmpl.cells.map(function(cell){
+      var cw=cell.cw||1,rh=cell.rh||1;
+      return {
+        x:areaX+cell.c*(colW+g),
+        y:areaY+cell.r*(rowH+g),
+        w:cw*colW+(cw-1)*g,
+        h:rh*rowH+(rh-1)*g
+      };
+    });
+  }
+  window.ppCollageCellRects=function(tmpl,extraPerRow){ return cellRects(tmpl,6,6,88,84,3,extraPerRow); };
+
+  window.chooseCollageTemplate=function(id){
+    if(!window.PP_COLLAGE_TEMPLATES[id]) return;
+    window.showcaseCollageTemplateId=id;
+    document.querySelectorAll('.collageTemplateBtn').forEach(function(b){b.classList.toggle('active',b.dataset.template===id);});
+    try{ if(typeof window.generateSelectedShowcaseLayout==='function') window.generateSelectedShowcaseLayout(); }catch(e){}
+  };
+
+  function buildIcon(tmpl){
+    var wrap=document.createElement('span');
+    wrap.className='collageTemplateIcon';
+    cellRects(tmpl,2,2,96,96,3,0).forEach(function(r){
+      var cell=document.createElement('span');
+      cell.style.left=r.x+'%'; cell.style.top=r.y+'%'; cell.style.width=r.w+'%'; cell.style.height=r.h+'%';
+      wrap.appendChild(cell);
+    });
+    return wrap;
+  }
+
+  function ensureGrid(){
+    var grid=document.getElementById('collageTemplateGrid');
+    if(!grid||grid.childElementCount) return;
+    TEMPLATE_ORDER.forEach(function(id){
+      var tmpl=window.PP_COLLAGE_TEMPLATES[id];
+      var btn=document.createElement('button');
+      btn.type='button'; btn.className='collageTemplateBtn'; btn.dataset.template=id;
+      btn.title='Use this collage template ('+tmpl.cells.length+' photos)';
+      btn.appendChild(buildIcon(tmpl));
+      btn.onclick=function(e){ e.preventDefault(); window.chooseCollageTemplate(id); };
+      grid.appendChild(btn);
+    });
+    var current=window.showcaseCollageTemplateId||'quadrants';
+    var active=grid.querySelector('.collageTemplateBtn[data-template="'+current+'"]');
+    if(active) active.classList.add('active');
+  }
+
+  window.ppSyncCollageTemplateRow=function(){
+    ensureGrid();
+    var t=window.showcaseLayoutType||'strips';
+    var countRow=document.getElementById('frameCountRow');
+    var tmplRow=document.getElementById('collageTemplateRow');
+    if(countRow) countRow.classList.toggle('showcaseHidden', t==='collage');
+    if(tmplRow) tmplRow.classList.toggle('showcaseHidden', t!=='collage');
+  };
+
+  function boot(){ ensureGrid(); window.ppSyncCollageTemplateRow(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+  setTimeout(boot,300); setTimeout(boot,1200);
 })();
 </script>
 
