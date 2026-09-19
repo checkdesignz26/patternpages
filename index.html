@@ -21098,9 +21098,14 @@ else install();
     'thirds':{cols:3,rows:1,colWeights:[0.42,0.32,0.26],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1}]},
     'big-plus-three':{cols:2,rows:3,cells:[{c:0,r:0,cw:1,rh:3},{c:1,r:0,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:1,r:2,cw:1,rh:1}]},
     'grid-six':{cols:3,rows:2,colWeights:[0.40,0.33,0.27],rowWeights:[0.56,0.44],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1}]},
-    'grid-nine':{cols:3,rows:3,colWeights:[0.40,0.33,0.27],rowWeights:[0.38,0.34,0.28],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1},{c:0,r:2,cw:1,rh:1},{c:1,r:2,cw:1,rh:1},{c:2,r:2,cw:1,rh:1}]}
+    'grid-nine':{cols:3,rows:3,colWeights:[0.40,0.33,0.27],rowWeights:[0.38,0.34,0.28],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1},{c:0,r:2,cw:1,rh:1},{c:1,r:2,cw:1,rh:1},{c:2,r:2,cw:1,rh:1}]},
+    // Magazine-style hero: a landscape strip of 3 across the top, then a wide dominant centre
+    // photo flanked by two smaller stacked photos on each side - matching the reference the user
+    // sent (one big feature shot surrounded by supporting ones, mixing landscape and portrait
+    // cells rather than a uniform grid).
+    'hero-center':{cols:3,rows:3,colWeights:[0.30,0.40,0.30],rowWeights:[0.26,0.40,0.34],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:0,r:2,cw:1,rh:1},{c:1,r:1,cw:1,rh:2},{c:2,r:1,cw:1,rh:1},{c:2,r:2,cw:1,rh:1}]}
   };
-  var TEMPLATE_ORDER=['halves-v','halves-h','big-left','big-top','quadrants','thirds','big-plus-three','grid-six','grid-nine'];
+  var TEMPLATE_ORDER=['halves-v','halves-h','big-left','big-top','quadrants','thirds','big-plus-three','grid-six','grid-nine','hero-center'];
 
   // Shared by rebuild()'s collage branch (page-percentage rects, real gutter) and
   // the little icon previews below (0-100 icon-space rects, a bigger relative
