@@ -21091,11 +21091,14 @@ else install();
     'halves-h':{cols:1,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1}]},
     'big-left':{cols:2,rows:2,cells:[{c:0,r:0,cw:1,rh:2},{c:1,r:0,cw:1,rh:1},{c:1,r:1,cw:1,rh:1}]},
     'big-top':{cols:2,rows:2,cells:[{c:0,r:0,cw:2,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1}]},
-    'quadrants':{cols:2,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1}]},
-    'thirds':{cols:3,rows:1,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1}]},
+    // These four used to be perfectly even grids - per request, given deliberately uneven
+    // colWeights/rowWeights (see cellRects()) instead, so no two tiles in them are quite the
+    // same size, while still tiling the page edge-to-edge with no gaps or overlaps.
+    'quadrants':{cols:2,rows:2,colWeights:[0.56,0.44],rowWeights:[0.58,0.42],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1}]},
+    'thirds':{cols:3,rows:1,colWeights:[0.42,0.32,0.26],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1}]},
     'big-plus-three':{cols:2,rows:3,cells:[{c:0,r:0,cw:1,rh:3},{c:1,r:0,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:1,r:2,cw:1,rh:1}]},
-    'grid-six':{cols:3,rows:2,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1}]},
-    'grid-nine':{cols:3,rows:3,cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1},{c:0,r:2,cw:1,rh:1},{c:1,r:2,cw:1,rh:1},{c:2,r:2,cw:1,rh:1}]}
+    'grid-six':{cols:3,rows:2,colWeights:[0.40,0.33,0.27],rowWeights:[0.56,0.44],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1}]},
+    'grid-nine':{cols:3,rows:3,colWeights:[0.40,0.33,0.27],rowWeights:[0.38,0.34,0.28],cells:[{c:0,r:0,cw:1,rh:1},{c:1,r:0,cw:1,rh:1},{c:2,r:0,cw:1,rh:1},{c:0,r:1,cw:1,rh:1},{c:1,r:1,cw:1,rh:1},{c:2,r:1,cw:1,rh:1},{c:0,r:2,cw:1,rh:1},{c:1,r:2,cw:1,rh:1},{c:2,r:2,cw:1,rh:1}]}
   };
   var TEMPLATE_ORDER=['halves-v','halves-h','big-left','big-top','quadrants','thirds','big-plus-three','grid-six','grid-nine'];
 
@@ -21103,18 +21106,23 @@ else install();
   // the little icon previews below (0-100 icon-space rects, a bigger relative
   // gutter so the split reads clearly at 34px) - same cols/rows/cell spans, two
   // different areas/gutters, so an icon always matches what actually gets built.
+  function weights(n,given){
+    var w=(given&&given.length===n)?given.slice():new Array(n).fill(1/n);
+    var sum=w.reduce(function(a,b){return a+b;},0)||1;
+    return w.map(function(x){return x/sum;});
+  }
   function cellRects(tmpl,areaX,areaY,areaW,areaH,g,extraPerRow){
     var cols=tmpl.cols,rows=tmpl.rows;
-    var colW=(areaW-g*(cols-1))/cols;
-    var rowH=(areaH-g*(rows-1)-(extraPerRow||0)*rows)/rows;
+    var usableW=areaW-g*(cols-1), usableH=areaH-g*(rows-1)-(extraPerRow||0)*rows;
+    var colW=weights(cols,tmpl.colWeights).map(function(w){return w*usableW;});
+    var rowH=weights(rows,tmpl.rowWeights).map(function(w){return w*usableH;});
+    var colX=[areaX]; for(var i=0;i<cols-1;i++) colX.push(colX[i]+colW[i]+g);
+    var rowY=[areaY]; for(var j=0;j<rows-1;j++) rowY.push(rowY[j]+rowH[j]+g);
     return tmpl.cells.map(function(cell){
-      var cw=cell.cw||1,rh=cell.rh||1;
-      return {
-        x:areaX+cell.c*(colW+g),
-        y:areaY+cell.r*(rowH+g),
-        w:cw*colW+(cw-1)*g,
-        h:rh*rowH+(rh-1)*g
-      };
+      var cw=cell.cw||1,rh=cell.rh||1,w=0,h=0,a,b;
+      for(a=0;a<cw;a++) w+=colW[cell.c+a]; w+=g*(cw-1);
+      for(b=0;b<rh;b++) h+=rowH[cell.r+b]; h+=g*(rh-1);
+      return { x:colX[cell.c], y:rowY[cell.r], w:w, h:h };
     });
   }
   window.ppCollageCellRects=function(tmpl,extraPerRow){ return cellRects(tmpl,6,6,88,84,3,extraPerRow); };
