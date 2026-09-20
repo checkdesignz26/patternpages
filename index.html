@@ -1722,7 +1722,10 @@ body.theme-light .swbResizeHandle::after{
        actual hint iPadOS honours for which keyboard to show. "numeric" (not "decimal") since page
        dimensions are always whole pixels, never fractional. -->
   <div class="sizeInputs"><input id="customW" type="number" inputmode="numeric" value="3000" aria-label="width"><span>×</span><input id="customH" type="number" inputmode="numeric" value="2250" aria-label="height"></div>
-  <div class="grid2"><button class="primary" onclick="addSelectedSizePage()" title="Add a new page using the size chosen above">add new page</button><button onclick="applyPageSize()" title="Resize the current page to the size chosen above">resize current</button></div></div>
+  <div class="grid2"><button class="primary" onclick="addSelectedSizePage()" title="Add a new page using the size chosen above">add new page</button><button onclick="applyPageSize()" title="Resize the current page to the size chosen above">resize current</button></div>
+  <label class="checkRow"><input id="etsySafeZoneToggle" type="checkbox" onchange="window.ppToggleEtsySafeZone(this.checked)">show Etsy crop guide</label>
+  <p class="smallText">Etsy's search thumbnails are cropped to a square using your page's shorter side, so on a wide or tall page the rest is invisible in search results. This just overlays a guide on the canvas so you can keep text and important details inside the safe area - it never appears in your exported image.</p>
+  </div>
   <div class="box texturePanelBox"><h2>background textures</h2>
   <p class="smallText">Tap a paper, fabric or natural background to apply it instantly to the current page.</p>
   <select id="textureSelect" class="hidden" aria-hidden="true" tabindex="-1">
@@ -24355,4 +24358,67 @@ body.leftCollapsed.rightCollapsed .stage.pattern,body.leftCollapsed.rightCollaps
     right:6px!important;
   }
 </style>
+
+<!-- Real request: Etsy center-crops the primary listing photo down to a square (using the
+     shorter side) for its search-grid thumbnails, so on a non-square page whatever sits in the
+     leftover strip along the longer axis is invisible in search even though it's fully visible
+     on the actual listing page - the maker's own text was getting cut off there. Adds a purely
+     visual, toggle-able "Etsy crop guide" overlay (never drawn into the exported PNG - it's a
+     plain DOM overlay, not a layer, and renderPageToCanvas never touches it) that dims the two
+     margin strips Etsy's square crop would remove. Computed dynamically from whichever page size
+     is actually active - landscape dims the left/right strips, portrait dims top/bottom, and a
+     page that's already square shows nothing since there's nothing to crop - rather than
+     hardcoding the 3000x2250 Etsy listing preset, since this app has many page-size presets and
+     the toggle should keep working correctly across all of them. Placed last (after every other
+     window.renderPages reassignment in this file) so it wraps whichever version is actually live
+     and re-applies the guide after every single render, on top of the freshly-rebuilt stage. -->
+<style id="pp-etsy-safe-zone-css">
+  .ppEtsySafeZoneOverlay{position:absolute;inset:0;pointer-events:none;z-index:500;}
+  .ppEtsySafeZoneDim{position:absolute;background:rgba(0,0,0,.42);}
+</style>
+<script id="pp-etsy-safe-zone-js">
+(function(){
+  'use strict';
+  function safeZoneSpecFor(p){
+    if(!p||!p.w||!p.h||p.w===p.h)return null;
+    if(p.w>p.h){ return {axis:'x', pct:(p.w-p.h)/2/p.w*100}; }
+    return {axis:'y', pct:(p.h-p.w)/2/p.h*100};
+  }
+  function applyOverlays(){
+    if(!window.ppEtsySafeZoneOn)return;
+    document.querySelectorAll('.pageBlock').forEach(function(block){
+      var pi=+block.dataset.page;
+      var p=(typeof state!=='undefined'&&state.pages)?state.pages[pi]:null;
+      var stage=block.querySelector('.stage');
+      if(!p||!stage)return;
+      var spec=safeZoneSpecFor(p);
+      if(!spec)return;
+      var ov=document.createElement('div');
+      ov.className='ppEtsySafeZoneOverlay';
+      if(spec.axis==='x'){
+        ov.innerHTML=
+          '<div class="ppEtsySafeZoneDim" style="left:0;top:0;bottom:0;width:'+spec.pct+'%;border-right:2px dashed rgba(255,255,255,.85)"></div>'+
+          '<div class="ppEtsySafeZoneDim" style="right:0;top:0;bottom:0;width:'+spec.pct+'%;border-left:2px dashed rgba(255,255,255,.85)"></div>';
+      }else{
+        ov.innerHTML=
+          '<div class="ppEtsySafeZoneDim" style="left:0;top:0;right:0;height:'+spec.pct+'%;border-bottom:2px dashed rgba(255,255,255,.85)"></div>'+
+          '<div class="ppEtsySafeZoneDim" style="left:0;bottom:0;right:0;height:'+spec.pct+'%;border-top:2px dashed rgba(255,255,255,.85)"></div>';
+      }
+      stage.appendChild(ov);
+    });
+  }
+  window.ppToggleEtsySafeZone=function(on){
+    window.ppEtsySafeZoneOn=!!on;
+    if(typeof window.renderPages==='function')window.renderPages(); else applyOverlays();
+  };
+  var oldRenderPages=window.renderPages;
+  if(typeof oldRenderPages==='function'){
+    window.renderPages=function(){
+      var r=oldRenderPages.apply(this,arguments);
+      try{applyOverlays();}catch(e){}
+      return r;
+    };
+  }
+})();
+</script>
 
