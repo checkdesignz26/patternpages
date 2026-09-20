@@ -1663,7 +1663,7 @@ body.theme-light .swbResizeHandle::after{
   </div>
   <p class="smallText">Horizontal stash stacks full-width fabric strips with stronger shadows.</p>
 </div><div class="frameCountRow" id="frameCountRow"><label>number of slots</label><div class="frameStepper" aria-label="number of pattern slots"><button type="button" onclick="changeFrameCount(-1)" title="Remove a pattern slot">−</button><span id="cardCountDisplay">1</span><button type="button" onclick="changeFrameCount(1)" title="Add a pattern slot">+</button><input id="cardCount" type="hidden" value="1"></div></div><div id="collageTemplateRow" class="showcaseHidden"><label>collage template</label><div id="collageTemplateGrid" class="collageTemplateGrid"></div></div><label class="checkRow" id="showcaseCaptionRow"><input id="showcaseAddCaptions" type="checkbox">add a caption below each shape</label><button class="full primary" onclick="generateSelectedShowcaseLayout()" title="Build or rebuild the showcase with the chosen layout and slot count">generate layout</button><p class="smallText">After generating: tap a strip, tile, rectangle or circle so it highlights, then choose a pattern from the tray and tap <strong>fill selected slot</strong>.</p></div></div>
-  <div class="box trayTop"><h2>auto-fit collage</h2><div class="panelBody"><p class="smallText">Pick 2 or more patterns/photos below - tap the number badge in the corner of each thumbnail, in either tray - then generate. Each photo keeps its own proportions (rows are sized to fit exactly what you picked), so nothing gets cropped the way a fixed grid can.</p><p class="smallText">picked: <strong id="modularPickCount">0</strong> photo(s)</p><button class="full primary" id="modularGenerateBtn" onclick="generateModularCollage()" disabled title="Build a collage sized to fit exactly the picked photos, in the order picked">generate auto-fit collage</button><button class="full" onclick="clearModularPicks()" title="Clear all picked photos">clear picks</button></div></div>
+  <div class="box trayTop"><h2>auto-fit collage</h2><div class="panelBody"><p class="smallText">Pick 2 or more patterns/photos below - tap the small + badge in the corner of each thumbnail, in either tray - then generate. (Already multi-selected some patterns up in the Pattern Tray the normal way? Those count too, in that same order.) Each photo keeps its own proportions (rows are sized to fit exactly what you picked), so nothing gets cropped the way a fixed grid can.</p><p class="smallText">picked: <strong id="modularPickCount">0</strong> photo(s)</p><button class="full primary" id="modularGenerateBtn" onclick="generateModularCollage()" disabled title="Build a collage sized to fit exactly the picked photos, in the order picked">generate auto-fit collage</button><button class="full" onclick="clearModularPicks()" title="Clear all picked photos">clear picks</button></div></div>
   <div class="box trayTop frameWowBox"><h2>frames</h2><div class="panelBody"><p class="smallText"><strong>Add a pattern frame.</strong> Choose a built-in shape or add your own PNG shape with transparency, then fill it from the Pattern Tray.</p><button class="full primary" onclick="toggleFramePicker()" title="Choose a built-in shape or upload your own PNG frame">add frame</button><div id="framePicker" class="framePicker hidden"><div class="framePickerTitle">built-in frames</div><div class="frameShapeGrid"><button onclick="addPatternFrame('flower')" title="Add a flower-shaped pattern frame">✿<span>flower</span></button><button onclick="addPatternFrame('heart')" title="Add a heart-shaped pattern frame">♥<span>heart</span></button><button onclick="addPatternFrame('star')" title="Add a star-shaped pattern frame">★<span>star</span></button><button onclick="addPatternFrame('circle')" title="Add a circle-shaped pattern frame">●<span>circle</span></button><button onclick="addPatternFrame('arch')" title="Add an arch-shaped pattern frame">⌒<span>arch</span></button><button onclick="addPatternFrame('label')" title="Add a rectangular label-shaped pattern frame">▭<span>label</span></button></div><div class="framePickerTitle">custom frame</div><input id="customFrameInput" class="hidden" type="file" accept="image/png,image/*" onchange="addCustomFrameFromPNG(event)"><button class="full" onclick="customFrameInput.click()" title="Upload a PNG shape with a transparent background to use as a custom frame">add your PNG</button><p class="smallText">Tip: use a PNG shape with a transparent background. Pattern Pages turns the visible shape into a fillable frame.</p></div></div></div>
 
 
@@ -21361,11 +21361,40 @@ else install();
         th.appendChild(badge);
       }
       var order=picks.findIndex(function(p){return p.src===src;});
-      badge.classList.toggle('picked',order>-1);
-      badge.textContent=order>-1?String(order+1):'+';
+      var wantPicked=order>-1, wantText=order>-1?String(order+1):'+';
+      // Only touch class/text when they'd actually change - this tray is now watched by a
+      // subtree+attributes MutationObserver (see boot(), needed to notice the OTHER,
+      // pre-existing multi-select toggling its own badge in place), so an unconditional write
+      // here on every single repaint would just re-trigger that same observer forever.
+      if(badge.classList.contains('picked')!==wantPicked) badge.classList.toggle('picked',wantPicked);
+      if(badge.textContent!==wantText) badge.textContent=wantText;
     });
   }
   function paintBadges(){ paintBadgesForTray('patternTray','pattern'); paintBadgesForTray('assetTray','asset'); }
+
+  // The Pattern Tray already has its own numbered multi-select (the pink/purple badges used by
+  // "fill selected slot"/"magic fill" - "N patterns selected, fills in order") - a real report
+  // showed someone using THAT to pick their photos, then finding this panel still said "picked:
+  // 0" because it only ever looked at its own "+" badges. Count both: whatever's multi-selected
+  // there already, in its own order, first, then anything additionally tapped here (typically an
+  // Asset Tray photo, which has no other multi-select of its own) that isn't already included.
+  function existingPatternMultiSelect(){
+    return Array.from(document.querySelectorAll('#patternTray .thumb.ppMagicSelected'))
+      .map(function(th){
+        var badge=th.querySelector('.ppMagicNumber');
+        var img=th.querySelector('img');
+        return { order:badge?(parseInt(badge.textContent,10)||999):999, src:img&&img.src };
+      })
+      .filter(function(x){ return x.src; })
+      .sort(function(a,b){ return a.order-b.order; })
+      .map(function(x){ return {src:x.src}; });
+  }
+  function effectivePicks(){
+    var fromOld=existingPatternMultiSelect();
+    var oldSrcs=fromOld.map(function(p){return p.src;});
+    var extra=picks.filter(function(p){ return oldSrcs.indexOf(p.src)===-1; });
+    return fromOld.concat(extra);
+  }
 
   // Capture at the document level so this runs before each thumb div's own capture-phase
   // 'click' listener (safeRenderTrays' choose(), which selects that tray item and stops
@@ -21382,8 +21411,9 @@ else install();
   },true);
 
   function syncPanel(){
-    var countEl=document.getElementById('modularPickCount'); if(countEl) countEl.textContent=picks.length;
-    var genBtn=document.getElementById('modularGenerateBtn'); if(genBtn) genBtn.disabled=picks.length<2;
+    var n=effectivePicks().length;
+    var countEl=document.getElementById('modularPickCount'); if(countEl) countEl.textContent=n;
+    var genBtn=document.getElementById('modularGenerateBtn'); if(genBtn) genBtn.disabled=n<2;
   }
 
   window.clearModularPicks=function(){ picks=[]; paintBadges(); syncPanel(); };
@@ -21464,12 +21494,13 @@ else install();
   }
 
   window.generateModularCollage=async function(){
-    if(picks.length<2){ alert('Pick at least 2 patterns or photos first - tap the number badge on each thumbnail.'); return; }
+    var effective=effectivePicks();
+    if(effective.length<2){ alert('Pick at least 2 patterns or photos first - tap the + badge on each thumbnail (or multi-select patterns in the Pattern Tray the normal way).'); return; }
     var p=getPage(); if(!p){ alert('Add or select a page first.'); return; }
     var btn=document.getElementById('modularGenerateBtn');
     if(btn){ btn.disabled=true; btn.textContent='building…'; }
     try{
-      var dims=await Promise.all(picks.map(function(pk){ return loadDims(pk.src); }));
+      var dims=await Promise.all(effective.map(function(pk){ return loadDims(pk.src); }));
       var aspects=dims.map(function(d){ return d.w/(d.h||1); });
       var AREA_X=6,AREA_Y=6,AREA_W=88,AREA_H=84,GUTTER=3;
       var rows=justify(aspects,AREA_W,AREA_H,GUTTER);
@@ -21477,7 +21508,7 @@ else install();
       try{ if(typeof save==='function') save(); }catch(e){}
       p.layers=(p.layers||[]).filter(function(l){ return !l.generatedPatternLayout && !l.showcaseCaption; });
       var baseZ=(typeof nextZ==='function')?nextZ():100;
-      var made=picks.map(function(pk,i){
+      var made=effective.map(function(pk,i){
         var r=rects[i]||{x:6,y:6,w:20,h:20};
         var l=layer('card',{
           name:'auto-fit photo '+(i+1),
@@ -21505,8 +21536,12 @@ else install();
     paintBadges();
     syncPanel();
     var po=document.getElementById('patternTray'), ao=document.getElementById('assetTray');
-    var mo=new MutationObserver(function(){ paintBadges(); });
-    if(po) mo.observe(po,{childList:true,subtree:false});
+    var mo=new MutationObserver(function(){ paintBadges(); syncPanel(); });
+    // subtree+attributes too, not just childList - the Pattern Tray's own multi-select toggles
+    // .ppMagicSelected and its number badge's text on the existing thumb elements in place
+    // (no new/removed children), which a childList-only observer would miss entirely, leaving
+    // "picked: N" stale until the next unrelated re-render happened to trigger a repaint.
+    if(po) mo.observe(po,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
     if(ao) mo.observe(ao,{childList:true,subtree:false});
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
