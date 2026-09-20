@@ -24374,15 +24374,20 @@ body.leftCollapsed.rightCollapsed .stage.pattern,body.leftCollapsed.rightCollaps
      and re-applies the guide after every single render, on top of the freshly-rebuilt stage. -->
 <style id="pp-etsy-safe-zone-css">
   .ppEtsySafeZoneOverlay{position:absolute;inset:0;pointer-events:none;z-index:500;}
-  .ppEtsySafeZoneDim{position:absolute;background:rgba(0,0,0,.42);}
+  .ppEtsySafeZoneDim{position:absolute;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .ppEtsySafeZoneLabel{color:#fff;font:700 10.5px/1.35 system-ui,sans-serif;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.7);padding:4px;}
+  .ppEtsySafeZoneLabel small{display:block;font-weight:600;opacity:.8;font-size:.85em;}
 </style>
 <script id="pp-etsy-safe-zone-js">
 (function(){
   'use strict';
   function safeZoneSpecFor(p){
     if(!p||!p.w||!p.h||p.w===p.h)return null;
-    if(p.w>p.h){ return {axis:'x', pct:(p.w-p.h)/2/p.w*100}; }
-    return {axis:'y', pct:(p.h-p.w)/2/p.h*100};
+    if(p.w>p.h){ return {axis:'x', pct:(p.w-p.h)/2/p.w*100, px:(p.w-p.h)/2}; }
+    return {axis:'y', pct:(p.h-p.w)/2/p.h*100, px:(p.h-p.w)/2};
+  }
+  function labelHTML(spec){
+    return '<div class="ppEtsySafeZoneLabel">'+Math.round(spec.px)+'px<small>'+spec.pct.toFixed(1)+'% cropped</small></div>';
   }
   function applyOverlays(){
     if(!window.ppEtsySafeZoneOn)return;
@@ -24395,14 +24400,15 @@ body.leftCollapsed.rightCollapsed .stage.pattern,body.leftCollapsed.rightCollaps
       if(!spec)return;
       var ov=document.createElement('div');
       ov.className='ppEtsySafeZoneOverlay';
+      var label=labelHTML(spec);
       if(spec.axis==='x'){
         ov.innerHTML=
-          '<div class="ppEtsySafeZoneDim" style="left:0;top:0;bottom:0;width:'+spec.pct+'%;border-right:2px dashed rgba(255,255,255,.85)"></div>'+
-          '<div class="ppEtsySafeZoneDim" style="right:0;top:0;bottom:0;width:'+spec.pct+'%;border-left:2px dashed rgba(255,255,255,.85)"></div>';
+          '<div class="ppEtsySafeZoneDim" style="left:0;top:0;bottom:0;width:'+spec.pct+'%;border-right:2px dashed rgba(255,255,255,.85)">'+label+'</div>'+
+          '<div class="ppEtsySafeZoneDim" style="right:0;top:0;bottom:0;width:'+spec.pct+'%;border-left:2px dashed rgba(255,255,255,.85)">'+label+'</div>';
       }else{
         ov.innerHTML=
-          '<div class="ppEtsySafeZoneDim" style="left:0;top:0;right:0;height:'+spec.pct+'%;border-bottom:2px dashed rgba(255,255,255,.85)"></div>'+
-          '<div class="ppEtsySafeZoneDim" style="left:0;bottom:0;right:0;height:'+spec.pct+'%;border-top:2px dashed rgba(255,255,255,.85)"></div>';
+          '<div class="ppEtsySafeZoneDim" style="left:0;top:0;right:0;height:'+spec.pct+'%;border-bottom:2px dashed rgba(255,255,255,.85)">'+label+'</div>'+
+          '<div class="ppEtsySafeZoneDim" style="left:0;bottom:0;right:0;height:'+spec.pct+'%;border-top:2px dashed rgba(255,255,255,.85)">'+label+'</div>';
       }
       stage.appendChild(ov);
     });
