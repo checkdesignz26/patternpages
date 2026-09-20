@@ -1663,6 +1663,7 @@ body.theme-light .swbResizeHandle::after{
   </div>
   <p class="smallText">Horizontal stash stacks full-width fabric strips with stronger shadows.</p>
 </div><div class="frameCountRow" id="frameCountRow"><label>number of slots</label><div class="frameStepper" aria-label="number of pattern slots"><button type="button" onclick="changeFrameCount(-1)" title="Remove a pattern slot">−</button><span id="cardCountDisplay">1</span><button type="button" onclick="changeFrameCount(1)" title="Add a pattern slot">+</button><input id="cardCount" type="hidden" value="1"></div></div><div id="collageTemplateRow" class="showcaseHidden"><label>collage template</label><div id="collageTemplateGrid" class="collageTemplateGrid"></div></div><label class="checkRow" id="showcaseCaptionRow"><input id="showcaseAddCaptions" type="checkbox">add a caption below each shape</label><button class="full primary" onclick="generateSelectedShowcaseLayout()" title="Build or rebuild the showcase with the chosen layout and slot count">generate layout</button><p class="smallText">After generating: tap a strip, tile, rectangle or circle so it highlights, then choose a pattern from the tray and tap <strong>fill selected slot</strong>.</p></div></div>
+  <div class="box trayTop"><h2>auto-fit collage</h2><div class="panelBody"><p class="smallText">Pick 2 or more patterns/photos below - tap the number badge in the corner of each thumbnail, in either tray - then generate. Each photo keeps its own proportions (rows are sized to fit exactly what you picked), so nothing gets cropped the way a fixed grid can.</p><p class="smallText">picked: <strong id="modularPickCount">0</strong> photo(s)</p><button class="full primary" id="modularGenerateBtn" onclick="generateModularCollage()" disabled title="Build a collage sized to fit exactly the picked photos, in the order picked">generate auto-fit collage</button><button class="full" onclick="clearModularPicks()" title="Clear all picked photos">clear picks</button></div></div>
   <div class="box trayTop frameWowBox"><h2>frames</h2><div class="panelBody"><p class="smallText"><strong>Add a pattern frame.</strong> Choose a built-in shape or add your own PNG shape with transparency, then fill it from the Pattern Tray.</p><button class="full primary" onclick="toggleFramePicker()" title="Choose a built-in shape or upload your own PNG frame">add frame</button><div id="framePicker" class="framePicker hidden"><div class="framePickerTitle">built-in frames</div><div class="frameShapeGrid"><button onclick="addPatternFrame('flower')" title="Add a flower-shaped pattern frame">✿<span>flower</span></button><button onclick="addPatternFrame('heart')" title="Add a heart-shaped pattern frame">♥<span>heart</span></button><button onclick="addPatternFrame('star')" title="Add a star-shaped pattern frame">★<span>star</span></button><button onclick="addPatternFrame('circle')" title="Add a circle-shaped pattern frame">●<span>circle</span></button><button onclick="addPatternFrame('arch')" title="Add an arch-shaped pattern frame">⌒<span>arch</span></button><button onclick="addPatternFrame('label')" title="Add a rectangular label-shaped pattern frame">▭<span>label</span></button></div><div class="framePickerTitle">custom frame</div><input id="customFrameInput" class="hidden" type="file" accept="image/png,image/*" onchange="addCustomFrameFromPNG(event)"><button class="full" onclick="customFrameInput.click()" title="Upload a PNG shape with a transparent background to use as a custom frame">add your PNG</button><p class="smallText">Tip: use a PNG shape with a transparent background. Pattern Pages turns the visible shape into a fillable frame.</p></div></div></div>
 
 
@@ -21287,6 +21288,223 @@ else install();
     try{ var zs=document.getElementById('collageZoom'); if(zs) zs.value=100; }catch(e){}
     try{ if(typeof renderPages==='function') renderPages(); else if(typeof render==='function') render(); }catch(e){}
   };
+})();
+</script>
+
+<!-- Pattern Pages — modular "auto-fit" collage builder. Unlike the fixed grid templates
+     above (which crop every photo to a preset box via object-fit:cover), this reads each
+     picked photo's real width/height and lays them out in justified rows - the same
+     technique Google Photos/Flickr use for a "justified" gallery - sized so every photo
+     keeps its own proportions with (ideally) no cropping at all, tailored to however many
+     photos were picked rather than a generic template shape. -->
+<style id="ppages-modular-collage-css">
+  .thumb .ppModularPick{
+    position:absolute;right:5px;top:5px;z-index:31;min-width:22px;height:22px;padding:0 5px;
+    display:grid;place-items:center;border-radius:999px;background:rgba(20,15,30,.55);
+    border:2px solid rgba(255,255,255,.85);color:#fff;
+    font:900 11px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    cursor:pointer;
+  }
+  .thumb .ppModularPick.picked{
+    background:linear-gradient(90deg,#9b6bff,#ff8ed6);box-shadow:0 4px 10px rgba(0,0,0,.28);
+  }
+</style>
+<script id="ppages-modular-collage-js">
+(function(){
+  'use strict';
+  if(window.__PP_MODULAR_COLLAGE__) return;
+  window.__PP_MODULAR_COLLAGE__=true;
+
+  var picks=[]; // ordered list of { src }
+
+  function S(){ try{return state;}catch(e){return window.state||null;} }
+  function getPage(){ var s=S(); return s&&Array.isArray(s.pages)?s.pages[s.selectedPage||0]:null; }
+
+  function srcFromThumb(trayKey,th){
+    var idx=Number(th.dataset.trayIndex), s=S();
+    var list=s&&s.trays&&Array.isArray(s.trays[trayKey])?s.trays[trayKey]:[];
+    if(Number.isInteger(idx)&&list[idx]&&list[idx].src) return list[idx].src;
+    var im=th.querySelector('img'); return im&&im.src?im.src:'';
+  }
+
+  function togglePick(src){
+    if(!src) return;
+    var i=picks.findIndex(function(p){return p.src===src;});
+    if(i>-1) picks.splice(i,1); else picks.push({src:src});
+    paintBadges();
+    syncPanel();
+  }
+
+  function paintBadgesForTray(trayId,trayKey){
+    var tray=document.getElementById(trayId); if(!tray) return;
+    Array.from(tray.querySelectorAll('.thumb')).forEach(function(th){
+      var src=srcFromThumb(trayKey,th);
+      var badge=th.querySelector('.ppModularPick');
+      if(!badge){
+        // A plain <span>, not <button> - ".thumb button{display:none!important}" (the "no tiny
+        // X buttons on thumbnails" fix) hides every real button inside a tray thumb, this one
+        // included if it were one. No click/pointerdown listener attached here at all - see the
+        // single document-level capture listener below instead: each thumb div itself already
+        // has its own capture-phase 'click' listener (safeRenderTrays' choose(), which stops
+        // propagation to select that tray item) that runs before any listener on this badge -
+        // a descendant of that same div - would ever get a chance to see the event.
+        badge=document.createElement('span');
+        badge.className='ppModularPick';
+        badge.title='Pick this for the auto-fit collage';
+        badge.setAttribute('role','button');
+        th.appendChild(badge);
+      }
+      var order=picks.findIndex(function(p){return p.src===src;});
+      badge.classList.toggle('picked',order>-1);
+      badge.textContent=order>-1?String(order+1):'+';
+    });
+  }
+  function paintBadges(){ paintBadgesForTray('patternTray','pattern'); paintBadgesForTray('assetTray','asset'); }
+
+  // Capture at the document level so this runs before each thumb div's own capture-phase
+  // 'click' listener (safeRenderTrays' choose(), which selects that tray item and stops
+  // propagation) - the only way to intercept a click on this badge before that ancestor
+  // swallows it, same trick the collage-photo drag interceptor uses for pointerdown.
+  document.addEventListener('click',function(e){
+    var badge=e.target.closest && e.target.closest('.ppModularPick');
+    if(!badge) return;
+    e.preventDefault(); e.stopPropagation();
+    if(typeof e.stopImmediatePropagation==='function') e.stopImmediatePropagation();
+    var th=badge.closest('.thumb'); if(!th) return;
+    var trayKey=th.closest('#patternTray')?'pattern':'asset';
+    togglePick(srcFromThumb(trayKey,th));
+  },true);
+
+  function syncPanel(){
+    var countEl=document.getElementById('modularPickCount'); if(countEl) countEl.textContent=picks.length;
+    var genBtn=document.getElementById('modularGenerateBtn'); if(genBtn) genBtn.disabled=picks.length<2;
+  }
+
+  window.clearModularPicks=function(){ picks=[]; paintBadges(); syncPanel(); };
+
+  function loadDims(src){
+    return new Promise(function(resolve){
+      var im=new Image();
+      im.onload=function(){ resolve({w:im.naturalWidth||1,h:im.naturalHeight||1}); };
+      im.onerror=function(){ resolve({w:1,h:1}); };
+      im.src=src;
+    });
+  }
+
+  // Classic justified-row layout (Google Photos/Flickr style): every row is scaled so its
+  // photos, laid side by side at a shared row height, sum to exactly the full page width -
+  // no cropping, since each photo's own aspect ratio decides its width at that height.
+  function packRows(aspects,totalW,gutter,targetH){
+    var rows=[],cur=[];
+    function pushRow(h){
+      rows.push({h:h,items:cur.map(function(c){return {i:c.i,w:c.ar*h};})});
+      cur=[];
+    }
+    function closeFullRow(){
+      var sumAr=cur.reduce(function(s,c){return s+c.ar;},0);
+      pushRow((totalW-gutter*(cur.length-1))/sumAr);
+    }
+    aspects.forEach(function(ar,i){
+      cur.push({ar:ar,i:i});
+      var widthAtTarget=cur.reduce(function(s,c){return s+c.ar*targetH;},0)+gutter*(cur.length-1);
+      if(widthAtTarget>=totalW) closeFullRow();
+    });
+    if(cur.length){
+      // Leftover row too short to naturally reach full width on its own - use the plain
+      // target height instead of stretching to fill the width, which for very few items (an
+      // orphan single photo, say) can blow that one row's height up far past every other row -
+      // e.g. one lone landscape photo forced to span the entire page width. rowsToRects
+      // already centers a row narrower than full width, so this still reads as intentional.
+      pushRow(targetH);
+    }
+    return rows;
+  }
+  // The page has a fixed height too (unlike an endless-scroll web gallery), so the target row
+  // height itself needs solving for, not just guessed once. A small change in target height can
+  // regroup which photos land in which row (a discrete, combinatorial jump - not a smooth
+  // function), which made an earlier version of this - nudging target height by whatever ratio
+  // the previous pass's total height was off by - massively overshoot and oscillate rather than
+  // settle (confirmed: a 9-photo test case spiralled from a 107%-tall result to 202%-tall on the
+  // very next pass). Binary search only needs the general trend (taller target height -> more,
+  // shorter rows -> taller total) to hold, not smoothness, so it tolerates that jumpiness -
+  // tracking the best candidate seen, not just trusting the final bisection point, covers any
+  // local wiggle right at the optimum.
+  function totalHeightOf(rows,gutter){ return rows.reduce(function(a,r){return a+r.h;},0)+gutter*(rows.length-1); }
+  function justify(aspects,totalW,desiredH,gutter){
+    var lo=0.5, hi=desiredH*Math.max(3,aspects.length);
+    var best=packRows(aspects,totalW,gutter,(lo+hi)/2), bestDiff=Infinity;
+    for(var iter=0;iter<30;iter++){
+      var mid=(lo+hi)/2;
+      var rows=packRows(aspects,totalW,gutter,mid);
+      var total=totalHeightOf(rows,gutter);
+      var diff=Math.abs(total-desiredH);
+      if(diff<bestDiff){ bestDiff=diff; best=rows; }
+      if(total>desiredH) hi=mid; else lo=mid;
+    }
+    return best;
+  }
+  function rowsToRects(rows,areaX,areaY,areaW,areaH,gutter){
+    var n=rows.reduce(function(a,r){return a+r.items.length;},0);
+    var rects=new Array(n);
+    var totalH=rows.reduce(function(a,r){return a+r.h;},0)+gutter*(rows.length-1);
+    var y=areaY+Math.max(0,(areaH-totalH)/2);
+    rows.forEach(function(row){
+      var rowW=row.items.reduce(function(s,it){return s+it.w;},0)+gutter*(row.items.length-1);
+      var x=areaX+Math.max(0,(areaW-rowW)/2);
+      row.items.forEach(function(it){ rects[it.i]={x:x,y:y,w:it.w,h:row.h}; x+=it.w+gutter; });
+      y+=row.h+gutter;
+    });
+    return rects;
+  }
+
+  window.generateModularCollage=async function(){
+    if(picks.length<2){ alert('Pick at least 2 patterns or photos first - tap the number badge on each thumbnail.'); return; }
+    var p=getPage(); if(!p){ alert('Add or select a page first.'); return; }
+    var btn=document.getElementById('modularGenerateBtn');
+    if(btn){ btn.disabled=true; btn.textContent='building…'; }
+    try{
+      var dims=await Promise.all(picks.map(function(pk){ return loadDims(pk.src); }));
+      var aspects=dims.map(function(d){ return d.w/(d.h||1); });
+      var AREA_X=6,AREA_Y=6,AREA_W=88,AREA_H=84,GUTTER=3;
+      var rows=justify(aspects,AREA_W,AREA_H,GUTTER);
+      var rects=rowsToRects(rows,AREA_X,AREA_Y,AREA_W,AREA_H,GUTTER);
+      try{ if(typeof save==='function') save(); }catch(e){}
+      p.layers=(p.layers||[]).filter(function(l){ return !l.generatedPatternLayout && !l.showcaseCaption; });
+      var baseZ=(typeof nextZ==='function')?nextZ():100;
+      var made=picks.map(function(pk,i){
+        var r=rects[i]||{x:6,y:6,w:20,h:20};
+        var l=layer('card',{
+          name:'auto-fit photo '+(i+1),
+          x:r.x,y:r.y,w:r.w,h:r.h,r:0,z:baseZ+i,
+          src:pk.src,fit:'cover',
+          patternSlot:true,slotShape:'square',generatedPatternLayout:true,
+          collageTile:true,modularCollage:true,stackIndex:i
+        });
+        return l;
+      });
+      p.layers=p.layers.concat(made);
+      try{ if(typeof window.ppNormalizeShowcaseZ==='function') window.ppNormalizeShowcaseZ(p); }catch(e){}
+      try{ state.selected=null; }catch(e){}
+      try{ if(typeof render==='function') render(); }catch(e){}
+      try{ if(typeof autosaveSoon==='function') autosaveSoon(); }catch(e){}
+    }catch(err){
+      console.error(err);
+      alert('Could not build the auto-fit collage - please try again.');
+    }
+    if(btn){ btn.textContent='generate auto-fit collage'; }
+    syncPanel();
+  };
+
+  function boot(){
+    paintBadges();
+    syncPanel();
+    var po=document.getElementById('patternTray'), ao=document.getElementById('assetTray');
+    var mo=new MutationObserver(function(){ paintBadges(); });
+    if(po) mo.observe(po,{childList:true,subtree:false});
+    if(ao) mo.observe(ao,{childList:true,subtree:false});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+  setTimeout(boot,300); setTimeout(boot,1200);
 })();
 </script>
 
