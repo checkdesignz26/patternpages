@@ -1705,7 +1705,7 @@ body.theme-light .swbResizeHandle::after{
     <!-- Real report: this group used to also have its own "square" button at 1080x1080 - pixel-
          identical to instagram's "square post" above, just relabeled. Removed rather than
          relabeled: a genuine duplicate output is more useful gone than disambiguated. -->
-    <div class="presetMiniGroup"><span>facebook</span><button onclick="chooseQuickSize('Facebook landscape post',1200,630)" title="Set the page to a Facebook landscape post size">landscape 1200×630</button><button onclick="chooseQuickSize('Facebook cover',1640,924)" title="Set the page to a Facebook cover photo size">cover 1640×924</button></div>
+    <div class="presetMiniGroup"><span>facebook</span><button onclick="chooseQuickSize('Facebook landscape post',1200,630)" title="Set the page to a Facebook landscape post size">landscape 1200×630</button><button onclick="chooseQuickSize('Facebook cover',1640,856)" title="Set the page to a Facebook cover photo size">cover 1640×856</button></div>
     <div class="presetMiniGroup"><span>pattern</span><button onclick="chooseQuickSize('Pattern tile square',3600,3600)" title="Set the page to a 3600×3600 seamless pattern tile size">3600 square</button><button onclick="chooseQuickSize('Custom size',+$('customW').value||3000,+$('customH').value||2250)" title="Set the page to the custom width/height entered above">custom</button></div>
   </div>
   <!-- Real report, with a screenshot: this pill sat directly above the <select> below it,
@@ -1714,7 +1714,7 @@ body.theme-light .swbResizeHandle::after{
        (pick a preset from it directly), so the pill was purely redundant - removed rather than
        relabeled. updateChosenSizePill(), which only ever existed to update this pill, and its
        call sites are removed too rather than left as permanent no-ops. -->
-  <select id="sizePreset" onchange="applyPresetLabel()"><option value="3000,2250">Etsy listing image — 3000×2250</option><option value="3000,3000">Etsy square / pattern preview — 3000×3000</option><option value="3360,840">Etsy shop banner — 3360×840</option><option value="1080,1080">Instagram square post — 1080×1080</option><option value="1080,1350">Instagram portrait post — 1080×1350</option><option value="1080,1920">Instagram reel / story — 1080×1920</option><option value="1080,1920">TikTok video — 1080×1920</option><option value="1000,1500">Pinterest pin — 1000×1500</option><option value="1000,2100">Long Pinterest pin — 1000×2100</option><option value="1200,630">Facebook landscape post — 1200×630</option><option value="1640,924">Facebook cover — 1640×924</option><option value="3600,3600">Pattern tile square — 3600×3600</option><option value="custom">Custom size</option></select>
+  <select id="sizePreset" onchange="applyPresetLabel()"><option value="3000,2250">Etsy listing image — 3000×2250</option><option value="3000,3000">Etsy square / pattern preview — 3000×3000</option><option value="3360,840">Etsy shop banner — 3360×840</option><option value="1080,1080">Instagram square post — 1080×1080</option><option value="1080,1350">Instagram portrait post — 1080×1350</option><option value="1080,1920">Instagram reel / story — 1080×1920</option><option value="1080,1920">TikTok video — 1080×1920</option><option value="1000,1500">Pinterest pin — 1000×1500</option><option value="1000,2100">Long Pinterest pin — 1000×2100</option><option value="1200,630">Facebook landscape post — 1200×630</option><option value="1640,856">Facebook cover — 1640×856</option><option value="3600,3600">Pattern tile square — 3600×3600</option><option value="custom">Custom size</option></select>
   <!-- Real request: typing a custom page size popped up the full QWERTY keyboard on iPad instead
        of a compact number pad (like Procreate's canvas-size entry). type="number" alone doesn't
        reliably get a numeric keypad on iPadOS Safari the way it does on iPhone - inputmode is the
@@ -1885,7 +1885,7 @@ const PAGE_PRESETS={
  'pin-long':{type:'Long Pinterest Pin',w:1000,h:2100},
  'fb-post':{type:'Facebook Post Landscape',w:1200,h:630},
  'fb-square':{type:'Facebook Square Post',w:1080,h:1080},
- 'fb-cover':{type:'Facebook Cover',w:1640,h:924}
+ 'fb-cover':{type:'Facebook Cover',w:1640,h:856}
 };
 function newPage(type='listing'){
  let size=type==='pattern'?[3600,3600]:type==='social'?[1080,1080]:[3000,2250];
@@ -4649,7 +4649,7 @@ const SWATCHBOOK_DATA = [
     ["pin 1000×1500", "Set the page to a standard Pinterest pin size."],
     ["long pin 1000×2100", "Set the page to a long Pinterest pin size."],
     ["landscape 1200×630", "Set the page to a Facebook landscape post size."],
-    ["cover 1640×924", "Set the page to a Facebook cover photo size."],
+    ["cover 1640×856", "Set the page to a Facebook cover photo size."],
     ["3600 square", "Set the page to a 3600×3600 seamless pattern tile size."],
     ["a4 portrait 2480×3508 / a4 landscape 3508×2480", "Set the page to A4 size, portrait or landscape."],
     ["custom", "Set the page to the custom width/height entered above."],
