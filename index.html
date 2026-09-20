@@ -21246,6 +21246,14 @@ else install();
     var layerEl=img.closest('.layer[data-id]');
     var l=layerEl && findLayer(layerEl.dataset.id);
     if(!l || !l.collageTile) return;
+    // Real report: dragging a freshly-generated (unzoomed) collage tile's photo no longer moved
+    // the whole frame at all - this used to unconditionally intercept every pointerdown on the
+    // photo, which blocked makeDraggable's own pointerdown on the parent layer from ever
+    // running, whether or not there was actually anything to pan. Only take over once the photo
+    // is zoomed in past 100% (there's room to pan at all - ppCollageMaxOffset is 0 otherwise, so
+    // panning would be a no-op anyway) - below that, let the event fall through untouched so the
+    // ordinary whole-frame drag/resize keeps working, same as any other slot.
+    if(!(l.imgZoom>1)) return;
     // Stop this from also reaching the plain layer's own pointerdown (makeDraggable), which
     // would otherwise start dragging/resizing the whole frame at the same time as this pans
     // the photo inside it. A plain tap (no real movement) still selects normally afterwards -
