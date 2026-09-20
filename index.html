@@ -1861,7 +1861,7 @@ body.theme-light .swbResizeHandle::after{
     <button class="full" onclick="ppRecolorDownload()" title="Download the recoloured image as a PNG file">download recoloured png</button>
     <div class="status" id="recolorPngStatus">Ready for a PNG.</div>
   </div></div>
-  <div class="box"><h2>shape colours</h2><div class="colorRow ppColorRowWithNone"><label class="smallText">fill colour</label><input id="fillColor" type="color" value="#ffffff" oninput="applyColorControls()"><button type="button" id="fillColorNone" class="ppNoColorBtn" onclick="clearFillColor()" title="Remove the fill (make it transparent)" aria-label="Remove fill colour"></button></div><div class="colorRow ppColorRowWithNone"><label class="smallText">border colour</label><input id="borderColor" type="color" value="#111111" oninput="applyColorControls()"><button type="button" id="borderColorNone" class="ppNoColorBtn" onclick="clearBorderColor()" title="Remove the border" aria-label="Remove border colour"></button></div><div class="rangeRow"><label>border</label><input id="borderWidth" type="range" min="0" max="16" value="0" oninput="applyColorControls()"></div></div>
+  <div class="box"><h2>shape colours</h2><div class="colorRow ppColorRowWithNone"><label class="smallText">fill colour</label><input id="fillColor" type="color" value="#ffffff" oninput="applyColorControls()"><button type="button" id="fillColorNone" class="ppNoColorBtn" onclick="clearFillColor()" title="Remove the fill (make it transparent)" aria-label="Remove fill colour"></button></div><div class="colorRow ppColorRowWithNone"><label class="smallText">border colour</label><input id="borderColor" type="color" value="#111111" oninput="applyColorControls()"><button type="button" id="borderColorNone" class="ppNoColorBtn" onclick="clearBorderColor()" title="Remove the border" aria-label="Remove border colour"></button></div><div class="rangeRow"><label>border</label><input id="borderWidth" type="range" min="0" max="16" value="0" oninput="applyColorControls()"></div><div class="rangeRow"><label>shadow</label><input id="shapeShadow" type="range" min="0" max="30" value="0" oninput="applyColorControls()"></div></div>
  </aside>
 </main>
 <button id="toggleLeftPanel" class="panelToggle" onclick="toggleSidePanel('left')" aria-label="collapse left panel" title="Collapse or expand this panel"></button>
@@ -3033,6 +3033,7 @@ if(l.type==='frame'){
     -webkit-text-stroke:${l.textStroke||0}px ${l.effectColor||'#ffffff'};
     border-radius:${radius};
     padding:${pad};
+    box-shadow:${l.shapeShadow?`2px 4px ${l.shapeShadow}px rgba(0,0,0,.35)`:'none'};
     ${clip}
   ">${escapeHtml(l.disclosureBadge?'AI Generated':(isPlainShape(l)?'':(l.text||'')))}</div>`;
 }
@@ -3575,7 +3576,7 @@ function syncControls(){
  }
  $('textValue').value=l.disclosureBadge?'AI Generated':(l.text||'');
  $('fontFamily').value=[...$('fontFamily').options].some(o=>o.value===l.font)?l.font:'system-ui';$('fontSize').value=l.fontSize||36;if($('fontSizeNumber'))$('fontSizeNumber').value=l.fontSize||36;$('textColor').value=toHex(l.color||'#111111');$('textShadow').value=l.textShadow||0;$('textGlow').value=l.textGlow||0;$('textStroke').value=l.textStroke||0;$('effectColor').value=toHex(l.effectColor||'#ffffff');
- if($('lineHeight'))$('lineHeight').value=Math.round((l.lineHeight||1.05)*100);if($('letterSpacing'))$('letterSpacing').value=l.letterSpacing||0;if($('textPadding'))$('textPadding').value=l.textPadding==null?10:l.textPadding;$('fillColor').value=toHex(l.fill==='transparent'?'#ffffff':l.fill||'#ffffff');$('borderColor').value=toHex(l.border||'#111111');$('borderWidth').value=l.borderW||0;
+ if($('lineHeight'))$('lineHeight').value=Math.round((l.lineHeight||1.05)*100);if($('letterSpacing'))$('letterSpacing').value=l.letterSpacing||0;if($('textPadding'))$('textPadding').value=l.textPadding==null?10:l.textPadding;$('fillColor').value=toHex(l.fill==='transparent'?'#ffffff':l.fill||'#ffffff');$('borderColor').value=toHex(l.border||'#111111');$('borderWidth').value=l.borderW||0;if($('shapeShadow'))$('shapeShadow').value=l.shapeShadow||0;
  // Real beta-tester feedback: "for images. It shouldn't show a font size?" - selecting an image
  // left the text panel's font/spacing/effects fields enabled and showing a bogus default (36pt,
  // since images have no fontSize of their own), which reads as the app applying text settings to
@@ -3584,7 +3585,7 @@ function syncControls(){
  const hasText=['text','label'].includes(l.type);
  const hasFillBorder=['text','label','rectangle','square','circle'].includes(l.type);
  ['textValue','fontFamily','fontSize','fontSizeNumber','lineHeight','letterSpacing','textPadding','textColor','textShadow','textGlow','textStroke','effectColor'].forEach(id=>{if($(id))$(id).disabled=!!l.disclosureBadge||!hasText});
- ['fillColor','borderColor','borderWidth','fillColorNone','borderColorNone'].forEach(id=>{if($(id))$(id).disabled=!!l.disclosureBadge||!hasFillBorder});
+ ['fillColor','borderColor','borderWidth','fillColorNone','borderColorNone','shapeShadow'].forEach(id=>{if($(id))$(id).disabled=!!l.disclosureBadge||!hasFillBorder});
 }
 function applyControls(){
  let l=getLayer();
@@ -3647,7 +3648,7 @@ function applyControls(){
  $('selectedHint').textContent=l.disclosureBadge?'AI generated badge selected — resize the pill; text stays fixed':`${l.name} selected`;
 }
 function applyTextControls(){let l=getLayer();if(!l)return;if(l.disclosureBadge){l.text='AI Generated';l.fontSize=12;l.font='system-ui';renderPages();return;}l.text=$('textValue').value;l.font=$('fontFamily').value;l.fontSize=+$('fontSize').value;l.lineHeight=($('lineHeight')?+$('lineHeight').value:105)/100;l.letterSpacing=$('letterSpacing')?+$('letterSpacing').value:0;l.textPadding=$('textPadding')?+$('textPadding').value:10;l.color=$('textColor').value;l.textShadow=+$('textShadow').value;l.textGlow=+$('textGlow').value;l.textStroke=+$('textStroke').value;l.effectColor=$('effectColor').value;renderPages();renderLayers();renderFrameList()}
-function applyColorControls(){let l=getLayer();if(!l)return;if(l.disclosureBadge){l.fill='rgba(255,255,255,.92)';l.border='#ffffff';l.borderW=0;l.color='#555555';renderPages();return;}l.fill=$('fillColor').value;l.border=$('borderColor').value;l.borderW=+$('borderWidth').value;renderPages();renderLayers();renderFrameList()}
+function applyColorControls(){let l=getLayer();if(!l)return;if(l.disclosureBadge){l.fill='rgba(255,255,255,.92)';l.border='#ffffff';l.borderW=0;l.color='#555555';renderPages();return;}l.fill=$('fillColor').value;l.border=$('borderColor').value;l.borderW=+$('borderWidth').value;l.shapeShadow=+$('shapeShadow').value;renderPages();renderLayers();renderFrameList()}
 // Real report: "I accidentally fill my text field with a border colour, now I can't reverse it
 // anymore" - <input type="color"> can only ever produce a real colour, never hand back
 // "transparent"/"none", so once a fill or border colour was picked there was no way to clear it
@@ -20798,6 +20799,10 @@ else install();
       }catch(e){}
       }else if(['text','label','rectangle','square','circle'].includes(l.type)||l.text){
         ctx.fillStyle=l.fill==='transparent'?'rgba(0,0,0,0)':(l.fill||'#ffffff'); ctx.strokeStyle=l.border||'#111111'; ctx.lineWidth=(l.borderW||0)*fontScale;
+        // Matches the live .shapeText box-shadow (renderLayer, a couple thousand lines up) -
+        // reset right after the shape's own fill/stroke draw so it doesn't also apply to the
+        // text drawn on top, which already has its own separate shadow/glow handling below.
+        if(l.shapeShadow){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=l.shapeShadow*fontScale; ctx.shadowOffsetX=2*fontScale; ctx.shadowOffsetY=4*fontScale; }
         // Real report: a badge/label shape (oval, pill, rounded, circle, ribbon - addBadge()'s
         // badgeShape) exported as a plain rectangle instead of its actual shape. Most noticeable
         // with an empty caption (the reported case), since there was no text to distract from it,
@@ -20819,6 +20824,7 @@ else install();
         // exporter needs the matching ellipse draw or a fresh circle would export as a square.
         else if(l.type==='circle'){ctx.beginPath();ctx.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);ctx.closePath();ctx.fill();if(l.borderW)ctx.stroke();}
         else{ctx.fillRect(-w/2,-h/2,w,h); if(l.borderW)ctx.strokeRect(-w/2,-h/2,w,h);}
+        if(l.shapeShadow){ ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0; }
         var text=l.disclosureBadge?'AI Generated':((typeof isPlainShape==='function' && isPlainShape(l))?'':(l.text||'')); if(text){
           var fs=(l.fontSize||36)*fontScale, lh=(l.lineHeight||1.05)*fs;
           ctx.fillStyle=l.color||'#111111'; ctx.textAlign=l.textAlign||'center'; ctx.textBaseline='middle';
