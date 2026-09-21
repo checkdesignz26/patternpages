@@ -1781,7 +1781,7 @@ body.theme-light .swbResizeHandle::after{
     <span>Select something on the page, then adjust layers, size, fonts, alignment and colours here.</span>
   </div>
   <div class="box layerPanelV2"><h2>layers</h2><div class="panelBody"><p class="smallText">Layer Panel 2.0: select layers, group them, then move or resize the group as one.</p><div class="layerV2Toolbar"><button id="multiSelectBtn" onclick="toggleLayerMultiSelect()" title="Turn on multi-select so you can pick several layers at once">select</button><button id="groupSelectedBtn" onclick="groupSelectedLayers()" disabled title="Group the selected layers so they move and resize together">group</button><button id="ungroupBtn" onclick="ungroupSelected()" disabled title="Split the selected group back into separate layers">ungroup</button></div><div id="layerList" class="layerList"></div><div class="grid2"><button onclick="bringForward()" title="Bring the selected layer to the very front">to front</button><button onclick="sendBack()" title="Send the selected layer to the very back">to back</button></div><div class="grid2"><button onclick="selectedForwardOne()" title="Move the selected layer forward one step">↑ one step</button><button onclick="selectedBackOne()" title="Move the selected layer back one step">↓ one step</button></div><button class="full" onclick="duplicateSelected()" title="Duplicate the selected layer">duplicate selected</button><button class="full" onclick="deleteSelected()" title="Delete the selected layer">delete selected</button></div></div>
-  <div class="box"><h2>edit & adjust</h2><div class="rangeRow"><label>scale</label><input id="scale" type="range" min="20" max="250" value="100" oninput="applyControls()"></div><div class="rangeRow"><label>opacity</label><input id="opacity" type="range" min="0" max="100" value="100" oninput="applyControls()"></div><div class="rangeRow"><label>x move</label><input id="xpos" type="range" min="-30" max="120" value="10" oninput="applyControls()"></div><div class="rangeRow"><label>y move</label><input id="ypos" type="range" min="-30" max="120" value="10" oninput="applyControls()"></div><div class="rangeRow"><label>width</label><input id="width" type="range" min="3" max="130" value="40" oninput="applyControls()"></div><div class="rangeRow"><label>height</label><input id="height" type="range" min="3" max="130" value="20" oninput="applyControls()"></div><div class="rangeRow"><label>rotate</label><input id="rotate" type="range" min="-180" max="180" value="0" oninput="applyControls()"></div><p class="smallText" style="margin:10px 0 4px;opacity:.75">resize the box:</p><div class="grid2"><button onclick="fitSelected('width')" title="Resize the selected layer's box to the page's full width">fit to page width</button><button onclick="fitSelected('canvas')" title="Resize the selected layer's box to fill the whole page">fit to page</button></div><p class="smallText" style="margin:10px 0 4px;opacity:.75">how the image fills that box:</p><div class="editMiniGroup"><button onclick="setSelectedFit('contain')" title="Scale the selected image to fit fully inside its current box, keeping its own proportions">fit</button><button onclick="setSelectedFit('cover')" title="Scale the selected image to fill its current box completely, cropping if needed">fill</button><button onclick="setSelectedFit('cover');fitSelected('canvas')" title="Scale the selected image to fill the entire page">cover page</button><button onclick="deselect()" title="Finish editing and deselect this layer">done</button></div><div id="collageZoomRow" class="collageZoomHidden"><p class="smallText" style="margin:10px 0 4px;opacity:.75">this photo in its collage frame — drag the photo on the canvas to reposition it:</p><div class="rangeRow"><label>photo zoom</label><input id="collageZoom" type="range" min="100" max="300" value="100" oninput="applyControls()"></div><button class="full" onclick="resetCollagePhoto()" title="Reset this photo's zoom and position back to centered">reset photo position</button></div><div class="gestureHint">Tap empty canvas to deselect. Pinch with two fingers to zoom the page. Two-finger double tap = undo.</div><div class="status" id="selectedHint">Nothing selected</div><button id="fillThisSlotBtn" class="full primary hidden" onclick="window.fillSelectedFrame&&window.fillSelectedFrame()" title="Fill just this placeholder with the pattern selected in the tray">✨ fill this placeholder from tray</button></div>
+  <div class="box"><h2>edit & adjust</h2><div class="rangeRow"><label>scale</label><input id="scale" type="range" min="20" max="250" value="100" oninput="applyControls()"></div><div class="rangeRow"><label>opacity</label><input id="opacity" type="range" min="0" max="100" value="100" oninput="applyControls()"></div><div class="rangeRow"><label>x move</label><input id="xpos" type="range" min="-30" max="120" value="10" oninput="applyControls()"></div><div class="rangeRow"><label>y move</label><input id="ypos" type="range" min="-30" max="120" value="10" oninput="applyControls()"></div><div class="rangeRow"><label>width</label><input id="width" type="range" min="3" max="130" value="40" oninput="applyControls()"></div><div class="rangeRow"><label>height</label><input id="height" type="range" min="3" max="130" value="20" oninput="applyControls()"></div><div class="rangeRow"><label>rotate</label><input id="rotate" type="range" min="-180" max="180" value="0" oninput="applyControls()"></div><div id="imgShadowRow" class="imgShadowHidden"><div class="rangeRow"><label>shadow</label><input id="imgShadow" type="range" min="0" max="30" value="0" oninput="applyControls()"></div></div><p class="smallText" style="margin:10px 0 4px;opacity:.75">resize the box:</p><div class="grid2"><button onclick="fitSelected('width')" title="Resize the selected layer's box to the page's full width">fit to page width</button><button onclick="fitSelected('canvas')" title="Resize the selected layer's box to fill the whole page">fit to page</button></div><p class="smallText" style="margin:10px 0 4px;opacity:.75">how the image fills that box:</p><div class="editMiniGroup"><button onclick="setSelectedFit('contain')" title="Scale the selected image to fit fully inside its current box, keeping its own proportions">fit</button><button onclick="setSelectedFit('cover')" title="Scale the selected image to fill its current box completely, cropping if needed">fill</button><button onclick="setSelectedFit('cover');fitSelected('canvas')" title="Scale the selected image to fill the entire page">cover page</button><button onclick="deselect()" title="Finish editing and deselect this layer">done</button></div><div id="collageZoomRow" class="collageZoomHidden"><p class="smallText" style="margin:10px 0 4px;opacity:.75">this photo in its collage frame — drag the photo on the canvas to reposition it:</p><div class="rangeRow"><label>photo zoom</label><input id="collageZoom" type="range" min="100" max="300" value="100" oninput="applyControls()"></div><button class="full" onclick="resetCollagePhoto()" title="Reset this photo's zoom and position back to centered">reset photo position</button></div><div class="gestureHint">Tap empty canvas to deselect. Pinch with two fingers to zoom the page. Two-finger double tap = undo.</div><div class="status" id="selectedHint">Nothing selected</div><button id="fillThisSlotBtn" class="full primary hidden" onclick="window.fillSelectedFrame&&window.fillSelectedFrame()" title="Fill just this placeholder with the pattern selected in the tray">✨ fill this placeholder from tray</button></div>
   <div class="box" id="alignPanel"><h2>alignment</h2><p class="smallText">Align the selected text, banner, image, label or frame to the page - or, if it's part of a group, to that group instead.</p><div class="grid3"><button onclick="alignSelected('left')" title="Align the selected layer to the left edge of the page">left</button><button onclick="alignSelected('hcenter')" title="Centre the selected layer horizontally">centre</button><button onclick="alignSelected('right')" title="Align the selected layer to the right edge of the page">right</button></div><div class="grid3"><button onclick="alignSelected('top')" title="Align the selected layer to the top of the page">top</button><button onclick="alignSelected('vcenter')" title="Centre the selected layer vertically">middle</button><button onclick="alignSelected('bottom')" title="Align the selected layer to the bottom of the page">bottom</button></div><div class="grid2"><button onclick="alignSelected('centerBoth')" title="Centre the selected layer on the page, both ways">centre page</button><button onclick="alignSelected('safeMiddle')" title="Centre the selected layer within the safe printable area">safe middle</button></div></div>
   <div class="box matchmakerBox"><h2>font matchmaker</h2>
   <p class="smallText">Choose the main font you like, then let Pattern Pages suggest matching fonts. This is separate from quick presets.</p>
@@ -2987,6 +2987,9 @@ if(l.hidden)d.style.display='none';
 d.style.setProperty("opacity", (l.opacity ?? 1), "important");
 d.style.zIndex=l.z;
 d.style.transform=`rotate(${l.r}deg) scale(${l.disclosureBadge?1:(l.scale||1)})`;
+if(l.imgShadow && ['strip','card','pattern','banner','overlay','image','mockup'].includes(l.type)){
+  d.style.filter=`drop-shadow(2px 4px ${l.imgShadow}px rgba(0,0,0,.35))`;
+}
 d.dataset.id=l.id;
 d.onclick=e=>{e.stopPropagation(); if(l.customMockup){state.selected=null; if(typeof window.ppWireMockupControls==='function')window.ppWireMockupControls(l); renderLayers(); syncControls(); return;} state.selectedPage=pi;state.selected=l.id;render()};
 if(l.patternSlot){
@@ -3541,10 +3544,11 @@ function applyAutoGroupFromUi(oldBox,newBox){
 function syncControls(){
  let l=getLayer();
  $('selectedHint').textContent=l?(l.customMockup?'Custom mock-up preview selected — locked. Use the custom mock-up controls on the left.':(l.disclosureBadge?'AI generated badge selected — resize the pill; text stays fixed':`${l.name} selected`)):'Nothing selected';
- ['scale','opacity','xpos','ypos','width','height','rotate'].forEach(id=>$(id).disabled=!l);
- if(!l)return;
+ ['scale','opacity','xpos','ypos','width','height','rotate','imgShadow'].forEach(id=>$(id).disabled=!l);
+ if(!l){if($('imgShadowRow'))$('imgShadowRow').classList.add('imgShadowHidden');return;}
  if(l.customMockup){
    ['scale','opacity','xpos','ypos','width','height','rotate'].forEach(id=>{$(id).disabled=true;});
+   if($('imgShadowRow'))$('imgShadowRow').classList.add('imgShadowHidden');
    try{ $('scale').value=Math.round((l.scale||1)*100); $('opacity').value=Math.round((l.opacity??1)*100); $('xpos').value=l.x; $('ypos').value=l.y; $('width').value=l.w; $('height').value=l.h; $('rotate').value=l.r||0; }catch(e){}
    return;
  }
@@ -3577,6 +3581,11 @@ function syncControls(){
    const showZoom=!!(l.collageTile && l.src && !isGroupLayer(l) && !groupBox);
    $('collageZoomRow').classList.toggle('collageZoomHidden',!showZoom);
    if(showZoom) $('collageZoom').value=Math.round((l.imgZoom||1)*100);
+ }
+ if($('imgShadowRow')){
+   const showImgShadow=!!(['strip','card','pattern','banner','overlay','image','mockup'].includes(l.type) && !isGroupLayer(l) && !groupBox);
+   $('imgShadowRow').classList.toggle('imgShadowHidden',!showImgShadow);
+   if(showImgShadow) $('imgShadow').value=l.imgShadow||0;
  }
  $('textValue').value=l.disclosureBadge?'AI Generated':(l.text||'');
  $('fontFamily').value=[...$('fontFamily').options].some(o=>o.value===l.font)?l.font:'system-ui';$('fontSize').value=l.fontSize||36;if($('fontSizeNumber'))$('fontSizeNumber').value=l.fontSize||36;$('textColor').value=toHex(l.color||'#111111');$('textShadow').value=l.textShadow||0;$('textGlow').value=l.textGlow||0;$('textStroke').value=l.textStroke||0;$('effectColor').value=toHex(l.effectColor||'#ffffff');
@@ -3642,6 +3651,9 @@ function applyControls(){
  l.w=+$('width').value;
  l.h=+$('height').value;
  l.r=+$('rotate').value;
+ if($('imgShadowRow') && !$('imgShadowRow').classList.contains('imgShadowHidden')){
+   l.imgShadow=+$('imgShadow').value;
+ }
  if(l.collageTile && $('collageZoomRow') && !$('collageZoomRow').classList.contains('collageZoomHidden')){
    l.imgZoom=Math.max(1,+$('collageZoom').value/100);
    const maxOff=typeof window.ppCollageMaxOffset==='function'?window.ppCollageMaxOffset(l.imgZoom):0;
@@ -20786,6 +20798,22 @@ else install();
         // the drag-to-reposition + "photo zoom" slider in edit & adjust). imgZoom/imgOffX/imgOffY
         // default to 1/0/0 for every other layer, so this reduces to the original draw for them.
         var imgZoom=Math.max(1,l.imgZoom||1), imgOffXpct=(l.imgOffX||0)/100, imgOffYpct=(l.imgOffY||0)/100;
+        // Matches the live .layer drop-shadow filter (renderLayer, a couple thousand lines up) -
+        // cast against the actual drawn image rect (the full box for 'cover', since that always
+        // fully covers it; the smaller letterboxed dw/dh rect for 'contain') in its own unclipped
+        // save/restore pass BEFORE the clip below, since clip() would otherwise cut off the part
+        // of the shadow that spills outside the image itself.
+        if(l.imgShadow){
+          ctx.save();
+          ctx.globalCompositeOperation='source-over';
+          ctx.shadowColor='rgba(0,0,0,.35)';ctx.shadowBlur=l.imgShadow*fontScale;ctx.shadowOffsetX=2*fontScale;ctx.shadowOffsetY=4*fontScale;
+          ctx.fillStyle='#000';ctx.beginPath();
+          if(isCircleShape) ctx.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);
+          else if(l.fit==='contain'){ var scS=Math.min(w/img.width,h/img.height),dwS=img.width*scS*imgZoom,dhS=img.height*scS*imgZoom; ctx.rect(-dwS/2+imgOffXpct*dwS,-dhS/2+imgOffYpct*dhS,dwS,dhS); }
+          else ctx.rect(-w/2,-h/2,w,h);
+          ctx.fill();
+          ctx.restore();
+        }
         if(l.fit==='contain'){
           var sc=Math.min(w/img.width,h/img.height),dw=img.width*sc*imgZoom,dh=img.height*sc*imgZoom;
           var cx=-dw/2+imgOffXpct*dw, cy=-dh/2+imgOffYpct*dh;
@@ -21213,6 +21241,7 @@ else install();
      whole-frame drag untouched. -->
 <style id="ppages-collage-reposition-css">
   #collageZoomRow.collageZoomHidden{display:none!important;}
+  #imgShadowRow.imgShadowHidden{display:none!important;}
   .ppCollageImgFrame{position:absolute;inset:0;overflow:hidden;touch-action:none;}
   /* .layer img{pointer-events:none} (elsewhere) deliberately makes every other layer's image
      click-through, so a drag anywhere on it reaches the parent .layer div's own move/resize
