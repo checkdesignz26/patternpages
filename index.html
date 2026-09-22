@@ -4653,7 +4653,7 @@ const SWATCHBOOK_DATA = [
     ["banner", "Add a wide banner image layer."],
     ["overlay", "Add a full-page overlay image layer."],
     ["add AI generated badge", "Add a movable &ldquo;AI generated&rdquo; disclosure badge."],
-    ["✂️ crop selected to layer / crop mode on", "Draw a rectangle over a selected image or template and turn just that piece into its own movable image layer."]
+    ["✂️ crop selected to layer / crop mode on", "Select an image or template, tap crop, then drag the pre-placed box (or its corner handles) over the piece you want and tap confirm crop to turn it into its own movable image layer."]
   ]},
   // "Batch listing set" section hidden ahead of launch, along with its panel - see
   // #batchListingSetBox above. Restore both together when the feature is ready:
@@ -7376,13 +7376,29 @@ aside:last-of-type .shadowSliderBox{
 document.addEventListener('click', function(e){
   const sel=document.querySelector('.layer.selected');
   if(!sel) return;
-  if(e.target===sel || sel.closest?.('.layer.selected')){
-    if(window.__tapDeselectTarget===sel){
+  // Real bug, found while chasing an unrelated "crop button doesn't respond" report: this checked
+  // sel.closest('.layer.selected') instead of e.target.closest('.layer.selected') - since sel IS
+  // already the currently-selected layer element, sel.closest() on itself always matches, no
+  // matter what was actually clicked. That made this "tap the selected layer again to deselect
+  // it" handler fire on literally the SECOND click anywhere on the page (a panel header, an
+  // unrelated button, anything) while any layer was selected - silently deselecting the layer and
+  // calling stopPropagation(), which ate that second click before the thing actually tapped ever
+  // got a chance to run its own handler. Checking the real click target against the selected
+  // layer (not the selected layer against itself) makes this only fire for an actual second tap
+  // on the selected layer, as the __tapDeselectTarget naming always intended.
+  if(e.target===sel || e.target.closest?.('.layer.selected')){
+    // Compare by the layer's own stable id, not the DOM node itself - the layer's own onclick
+    // (bubble phase, right after this capture-phase listener) calls render() on every single
+    // click, which tears down and rebuilds this exact node. Comparing node references meant
+    // __tapDeselectTarget was always already stale by the very next click, so this could never
+    // actually reach its own deselect() branch.
+    const selId=sel.dataset&&sel.dataset.id;
+    if(selId && window.__tapDeselectTarget===selId){
       if(typeof deselect==='function') deselect();
       window.__tapDeselectTarget=null;
       e.stopPropagation();
     } else {
-      window.__tapDeselectTarget=sel;
+      window.__tapDeselectTarget=selId;
     }
   } else {
     window.__tapDeselectTarget=null;
@@ -10784,35 +10800,38 @@ button,.frameStepper button,.frameShapeGrid button,input,select,label{touch-acti
     position:absolute;
     inset:0;
     z-index:10070;
-    cursor:crosshair;
-    background:rgba(155,107,255,.045);
+    background:transparent;
     touch-action:none;
     border-radius:inherit;
   }
-  .cropLayerOverlay::before{
-    content:'drag crop area';
-    position:absolute;
-    left:8px;
-    top:8px;
-    z-index:2;
-    background:rgba(20,15,30,.84);
-    color:var(--whiteText,#fff8fb);
-    border:1px solid rgba(255,232,248,.22);
-    border-radius:999px;
-    padding:4px 8px;
-    font-size:11px;
-    font-weight:900;
-    pointer-events:none;
-  }
-  .cropSelectionRect{
+  .cropMarquee{
     position:absolute;
     border:2px solid #ff8ed6;
-    background:rgba(255,142,214,.18);
-    box-shadow:0 0 0 9999px rgba(0,0,0,.26),0 0 16px rgba(255,142,214,.55);
-    pointer-events:none;
-    min-width:2px;
-    min-height:2px;
+    background:rgba(255,142,214,.16);
+    box-shadow:0 0 0 9999px rgba(0,0,0,.32),0 0 16px rgba(255,142,214,.55);
+    touch-action:none;
+    cursor:move;
+    min-width:12px;
+    min-height:12px;
   }
+  .cropHandle{
+    position:absolute;
+    width:26px;
+    height:26px;
+    margin:-13px;
+    border-radius:50%;
+    background:linear-gradient(90deg,var(--purple),var(--pink));
+    border:3px solid #fff;
+    box-shadow:0 4px 12px rgba(0,0,0,.35);
+    touch-action:none;
+    z-index:2;
+  }
+  .cropHandle-nw{left:0;top:0;cursor:nwse-resize;}
+  .cropHandle-ne{left:100%;top:0;cursor:nesw-resize;}
+  .cropHandle-sw{left:0;top:100%;cursor:nesw-resize;}
+  .cropHandle-se{left:100%;top:100%;cursor:nwse-resize;}
+  .cropConfirmBar{margin:8px 0;}
+  .cropConfirmBar #cropCancelBtn{opacity:.85;}
   .cropToLayerHint{
     margin-top:7px;
     border:1px dashed rgba(255,142,214,.24);
@@ -10856,9 +10875,19 @@ button,.frameStepper button,.frameShapeGrid button,input,select,label{touch-acti
         return;
       }
       window.cropToLayerMode=true;
-      safeToast('Crop to Layer: drag a rectangle on the selected image.');
+      // Real report: "it is so awkward to use" - the old flow demanded a single precise drag
+      // gesture, right on the source layer's own on-screen box, which can be tiny (a small
+      // photo tile inside a busy mock-up, say) - one shaky finger drag and you either missed
+      // the crop entirely or got the wrong area with no way to fix it. Starting from a
+      // ready-made, generously-sized box that the user only needs to nudge/resize via easy-to-
+      // grab corner handles - then confirm with a normal-sized button in the panel, off to the
+      // side rather than crammed into that tiny box - is far more forgiving.
+      window.__ppCropRectDraft={x:0.15,y:0.15,w:0.7,h:0.7};
+      safeToast('Crop to Layer: drag the box or its corner handles, then tap confirm crop.');
     }else{
       window.cropToLayerMode=false;
+      window.__ppCropRectDraft=null;
+      hideConfirmBar();
       safeToast('Crop to Layer off');
     }
     updateCropButton();
@@ -10885,14 +10914,39 @@ button,.frameStepper button,.frameShapeGrid button,input,select,label{touch-acti
     btn.type='button';
     btn.className='full cropToLayerBtn';
     btn.textContent='✂️ crop selected to layer';
-    btn.title='Draw a rectangle over the selection and turn just that piece into its own image layer';
+    btn.title='Drag a box over the selection (or its corner handles) and turn just that piece into its own image layer';
     btn.onclick=toggleCropToLayer;
+    const bar=document.createElement('div');
+    bar.id='cropConfirmBar';
+    bar.className='grid2 cropConfirmBar';
+    bar.style.display='none';
+    bar.innerHTML='<button type="button" id="cropConfirmBtn" class="primary">✓ confirm crop</button><button type="button" id="cropCancelBtn">✕ cancel</button>';
     const hint=document.createElement('div');
     hint.className='cropToLayerHint';
-    hint.innerHTML='Prototype: select an image/template, tap crop, drag a rectangle, and that piece becomes a new movable image layer.';
+    hint.innerHTML='Select an image/template, tap crop, then drag the box on the canvas (or its corner handles) over the piece you want, and tap confirm crop.';
     const paras=[...body.querySelectorAll('p.smallText')];
-    if(paras.length){ body.insertBefore(hint, paras[paras.length-1]); body.insertBefore(btn, hint); }
-    else { body.appendChild(btn); body.appendChild(hint); }
+    if(paras.length){ body.insertBefore(hint, paras[paras.length-1]); body.insertBefore(bar, hint); body.insertBefore(btn, bar); }
+    else { body.appendChild(btn); body.appendChild(bar); body.appendChild(hint); }
+    document.getElementById('cropCancelBtn').onclick=function(){
+      window.cropToLayerMode=false;
+      window.__ppCropRectDraft=null;
+      hideConfirmBar();
+      updateCropButton();
+      try{ render(); }catch(e){}
+    };
+  }
+  function hideConfirmBar(){
+    const bar=document.getElementById('cropConfirmBar');
+    if(bar) bar.style.display='none';
+  }
+  function showConfirmBar(sourceLayer){
+    const bar=document.getElementById('cropConfirmBar');
+    if(!bar) return;
+    bar.style.display='';
+    document.getElementById('cropConfirmBtn').onclick=function(){
+      const rect=window.__ppCropRectDraft||{x:0.15,y:0.15,w:0.7,h:0.7};
+      createCropLayer(sourceLayer,rect);
+    };
   }
 
   function drawLayerImageToCanvas(layer, w, h, cb){
@@ -10941,6 +10995,8 @@ button,.frameStepper button,.frameShapeGrid button,input,select,label{touch-acti
       p.layers.push(newLayer);
       getState().selected=newLayer.id;
       window.cropToLayerMode=false;
+      window.__ppCropRectDraft=null;
+      hideConfirmBar();
       updateCropButton();
       try{ render(); }catch(e){}
       safeToast('Cropped piece added as a new layer.');
@@ -10954,42 +11010,82 @@ button,.frameStepper button,.frameShapeGrid button,input,select,label{touch-acti
     el.classList.add('cropSourceActive');
     const overlay=document.createElement('div');
     overlay.className='cropLayerOverlay';
-    let start=null, rectEl=null;
-    function localPoint(e){
-      const r=overlay.getBoundingClientRect();
-      return {x:Math.max(0,Math.min(r.width,e.clientX-r.left)), y:Math.max(0,Math.min(r.height,e.clientY-r.top)), w:r.width, h:r.height};
+
+    // Real report: "it is so awkward to use" - a single free-hand drag, right on the source
+    // layer's own on-screen box (which can be tiny), used to BE the whole gesture: miss it and
+    // you got nothing or the wrong crop, with no way to correct it before it committed. This is
+    // a real crop marquee instead - starts pre-placed at a sensible size (see
+    // window.__ppCropRectDraft, set in toggleCropToLayer), drag its body to move it or a corner
+    // handle to resize it, and it only becomes a layer once "confirm crop" (a normal-sized
+    // button down in the panel, not squeezed into this tiny box) is tapped.
+    if(!window.__ppCropRectDraft) window.__ppCropRectDraft={x:0.15,y:0.15,w:0.7,h:0.7};
+    const rect=window.__ppCropRectDraft;
+
+    const marquee=document.createElement('div');
+    marquee.className='cropMarquee';
+    const handles={};
+    ['nw','ne','sw','se'].forEach(function(pos){
+      const h=document.createElement('div');
+      h.className='cropHandle cropHandle-'+pos;
+      marquee.appendChild(h);
+      handles[pos]=h;
+    });
+    overlay.appendChild(marquee);
+
+    function overlayRect(){ return overlay.getBoundingClientRect(); }
+    // Real bug: this element tree is built fully detached from the document - renderPages()
+    // appends each layer's whole subtree to the stage in memory and only attaches the stage
+    // itself at the very end - so a pixel-based layout() called right here, synchronously, always
+    // measured a detached (0x0) overlay and drew a collapsed marquee. Percentages resolve
+    // correctly once the browser actually lays the attached tree out, with no measurement (and
+    // so no attachment-timing dependency) needed at all.
+    function layout(){
+      marquee.style.left=(rect.x*100)+'%';
+      marquee.style.top=(rect.y*100)+'%';
+      marquee.style.width=(rect.w*100)+'%';
+      marquee.style.height=(rect.h*100)+'%';
     }
-    function updateRect(a,b){
-      const x=Math.min(a.x,b.x), y=Math.min(a.y,b.y), w=Math.abs(a.x-b.x), h=Math.abs(a.y-b.y);
-      rectEl.style.left=x+'px'; rectEl.style.top=y+'px'; rectEl.style.width=w+'px'; rectEl.style.height=h+'px';
+    layout();
+
+    const MIN=0.06;
+    let dragMode=null, dragStart=null, rectStart=null;
+    function startDrag(mode,e){
+      dragMode=mode;
+      const r=overlayRect();
+      dragStart={x:e.clientX,y:e.clientY,rw:r.width,rh:r.height};
+      rectStart={x:rect.x,y:rect.y,w:rect.w,h:rect.h};
+      e.preventDefault(); e.stopPropagation();
+      try{ e.target.setPointerCapture(e.pointerId); }catch(err){}
     }
-    overlay.addEventListener('pointerdown',function(e){
+    function onDrag(e){
+      if(!dragMode) return;
       e.preventDefault(); e.stopPropagation();
-      start=localPoint(e);
-      rectEl=document.createElement('div');
-      rectEl.className='cropSelectionRect';
-      overlay.appendChild(rectEl);
-      updateRect(start,start);
-      overlay.setPointerCapture(e.pointerId);
-    },{passive:false});
-    overlay.addEventListener('pointermove',function(e){
-      if(!start||!rectEl) return;
-      e.preventDefault(); e.stopPropagation();
-      updateRect(start,localPoint(e));
-    },{passive:false});
-    overlay.addEventListener('pointerup',function(e){
-      if(!start||!rectEl) return;
-      e.preventDefault(); e.stopPropagation();
-      const end=localPoint(e);
-      const x=Math.min(start.x,end.x), y=Math.min(start.y,end.y), w=Math.abs(start.x-end.x), h=Math.abs(start.y-end.y);
-      const tiny=w<12||h<12;
-      start=null;
-      if(tiny){ rectEl.remove(); rectEl=null; return; }
-      rectEl=null;
-      createCropLayer(l,{x:x/end.w,y:y/end.h,w:w/end.w,h:h/end.h});
-    },{passive:false});
-    overlay.addEventListener('pointercancel',function(){ start=null; if(rectEl) rectEl.remove(); rectEl=null; },{passive:false});
+      const dx=(e.clientX-dragStart.x)/dragStart.rw, dy=(e.clientY-dragStart.y)/dragStart.rh;
+      if(dragMode==='move'){
+        rect.x=Math.max(0,Math.min(1-rectStart.w,rectStart.x+dx));
+        rect.y=Math.max(0,Math.min(1-rectStart.h,rectStart.y+dy));
+      }else{
+        let x=rectStart.x,y=rectStart.y,w=rectStart.w,h=rectStart.h;
+        if(dragMode.indexOf('w')>=0){ const nx=Math.max(0,Math.min(x+w-MIN,x+dx)); w=x+w-nx; x=nx; }
+        if(dragMode.indexOf('e')>=0){ w=Math.max(MIN,Math.min(1-x,w+dx)); }
+        if(dragMode.indexOf('n')>=0){ const ny=Math.max(0,Math.min(y+h-MIN,y+dy)); h=y+h-ny; y=ny; }
+        if(dragMode.indexOf('s')>=0){ h=Math.max(MIN,Math.min(1-y,h+dy)); }
+        rect.x=x;rect.y=y;rect.w=w;rect.h=h;
+      }
+      layout();
+    }
+    function endDrag(){ dragMode=null; }
+
+    marquee.addEventListener('pointerdown',function(e){ if(e.target===marquee) startDrag('move',e); },{passive:false});
+    Object.keys(handles).forEach(function(pos){
+      handles[pos].addEventListener('pointerdown',function(e){ startDrag(pos,e); },{passive:false});
+    });
+    overlay.addEventListener('pointermove',onDrag,{passive:false});
+    overlay.addEventListener('pointerup',endDrag,{passive:false});
+    overlay.addEventListener('pointercancel',endDrag,{passive:false});
+
     el.appendChild(overlay);
+    showConfirmBar(l);
   }
 
   const oldRenderLayer=window.renderLayer;
