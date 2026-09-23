@@ -1964,11 +1964,51 @@ const FONT_PAIRS={
  bold:{heading:'Impact',body:'Arial Rounded MT Bold',headingSize:68,bodySize:32,headingColor:'#111111'}
 };
 function selectedTextLayers(){return current().layers.filter(l=>['text','label'].includes(l.type)).sort((a,b)=>(a.y-b.y)||(a.z-b.z));}
+// Real report: "the title is chopped off" - addTitleSubtitle()'s own default headline (fontSize
+// 62 in a box only h:12 tall) and applyTextStylePreset('pinHeadline') (bumping fontSize to 68
+// with no matching height change) both hand back a box that's a few pixels too short for their
+// OWN default text, and .shapeText's `overflow:hidden` (needed so text can't spill onto other
+// layers) silently shaves the top/bottom off instead of ever warning anyone. Measuring the
+// actual rendered box after the fact - rather than re-deriving the CSS box model by hand, which
+// this file has been burned by before (wrap width, textPadding) - catches every real overflow
+// regardless of font, wrapping, or padding, and grows just enough to fit it; never shrinks a box
+// a person sized on purpose.
+window.ppEnsureTextBoxFits=function(l){
+  if(!l || !['text','label'].includes(l.type)) return false;
+  var node=document.querySelector('.layer[data-id="'+l.id+'"]');
+  if(!node) return false;
+  var grew=false;
+  // A single grow-by-the-measured-deficit pass leaves a residue rather than fully closing the
+  // gap (wrapped, height-constrained flex text re-measures a bit taller on each subsequent pass -
+  // confirmed by direct measurement, not just a rounding fudge) - looping against the freshly
+  // re-measured box each time converges to exactly zero overflow, so callers only ever need to
+  // call this once even for a single big jump (e.g. typing a much larger size and hitting enter,
+  // not just dragging the slider one tick at a time). Capped well past what even a full
+  // min-to-max fontSize jump needs, and it always stops the moment nothing's clipped.
+  var cap=Math.max(0,100-l.y);
+  for(var i=0;i<20;i++){
+    var body=node.querySelector('.shapeText');
+    if(!body || body.scrollHeight<=body.clientHeight+0.5) break;
+    if(l.h>=cap-0.01) break;
+    var stage=node.closest('.stage');
+    var stageH=stage?stage.getBoundingClientRect().height:0;
+    if(!stageH) break;
+    var deficitPct=(body.scrollHeight-body.clientHeight)/stageH*100;
+    l.h=Math.min(cap,l.h+deficitPct);
+    node.style.height=l.h+'%';
+    grew=true;
+  }
+  if(grew && typeof state!=='undefined' && state.selected===l.id){
+    var hInput=document.getElementById('height'); if(hInput) hInput.value=Math.round(l.h);
+  }
+  return grew;
+};
 function addTitleSubtitle(){
  save();
  let title=layer('text',{name:'headline text',text:'New Collection',x:12,y:12,w:76,h:12,fill:'transparent',font:'Georgia',fontSize:62,bold:false,color:'#555555',z:nextZ()});
  let sub=layer('text',{name:'subtitle text',text:'Seamless patterns for your creative projects',x:16,y:25,w:68,h:8,fill:'transparent',font:'Avenir Next',fontSize:28,color:'#555555',z:nextZ()+1});
  current().layers.push(title,sub);state.selected=title.id;render();
+ window.ppEnsureTextBoxFits(title);window.ppEnsureTextBoxFits(sub);
 }
 function applyFontPair(mood){
  let pair=FONT_PAIRS[mood]||FONT_PAIRS.editorial;
@@ -1979,6 +2019,7 @@ function applyFontPair(mood){
  heading.font=pair.heading;heading.fontSize=pair.headingSize;heading.bold=true;heading.color=pair.headingColor;
  if(body && body!==heading){body.font=pair.body;body.fontSize=pair.bodySize;body.bold=false;body.color=pair.headingColor;}
  state.selected=heading.id;render();
+ window.ppEnsureTextBoxFits(heading);if(body && body!==heading)window.ppEnsureTextBoxFits(body);
 }
 function applyTextStylePreset(kind){
  let l=getLayer();
@@ -1989,6 +2030,7 @@ function applyTextStylePreset(kind){
  if(kind==='saleBadge'){l.type='label';l.badgeShape='oval';l.fill='#ff8ed6';l.color='#ffffff';l.font='Arial Rounded MT Bold';l.fontSize=38;l.bold=true;l.borderW=0;l.w=Math.max(l.w,32);l.h=Math.max(l.h,12);}
  if(kind==='softLabel'){l.type='label';l.badgeShape='rounded';l.fill='#fff4fb';l.color='#302842';l.font='Georgia';l.fontSize=32;l.bold=true;l.border='#ff8ed6';l.borderW=2;}
  render();
+ window.ppEnsureTextBoxFits(l);
 }
 
 function applyPresetLabel(){let v=$('sizePreset').value;if(v!=='custom'){let [w,h]=v.split(',');$('customW').value=w;$('customH').value=h;let sel=$('sizePreset');window.selectedFriendlyPresetLabel=(sel.options[sel.selectedIndex]?.textContent||'').split('—')[0].trim();}}
@@ -12971,6 +13013,7 @@ window.addEventListener('DOMContentLoaded',function(){
       l.name=clean;
     })();
     updateTextNode(l);
+    if(typeof window.ppEnsureTextBoxFits==='function') window.ppEnsureTextBoxFits(l);
     clearTimeout(typingTimer);
     typingTimer=setTimeout(function(){
       // Refresh side lists/status after typing pauses, but never during the keystroke.
