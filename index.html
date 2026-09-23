@@ -2479,8 +2479,27 @@ function isGroupLayer(l){return !!(l && l.type==='group');}
 function groupMembers(groupId){
   return current().layers.filter(l=>l.groupId===groupId && l.type!=='group');
 }
+// Real request: "can I group a group which has already a group" - groupMembers() above is the
+// panel-display list (a nested group's own row still lists under its OWN group header, not
+// flattened into its parent's), but moving/resizing/aligning a group needs the real, underlying
+// layers it actually contains, however many levels of nesting deep - a nested group's own x/y/w/h
+// are just a cached bounding box (see updateGroupLayerBounds), not something that moves anything
+// if shifted directly. Walks the real groupId chain down to actual, non-group layers only.
+// `seen` guards against an accidental cycle turning this into an infinite loop.
+function groupLeafMembers(groupId,seen){
+  seen=seen||{};
+  if(seen[groupId])return [];
+  seen[groupId]=true;
+  const direct=current().layers.filter(l=>l.groupId===groupId);
+  let out=[];
+  direct.forEach(l=>{
+    if(isGroupLayer(l)) out=out.concat(groupLeafMembers(l.id,seen));
+    else out.push(l);
+  });
+  return out;
+}
 function groupBounds(groupId){
-  const members=groupMembers(groupId);
+  const members=groupLeafMembers(groupId);
   if(!members.length)return null;
   const minX=Math.min(...members.map(l=>l.x));
   const minY=Math.min(...members.map(l=>l.y));
@@ -2498,7 +2517,7 @@ function updateAllGroupBounds(){
 }
 function makeGroupSnapshot(groupId){
   const b=groupBounds(groupId);
-  return {bounds:b,items:groupMembers(groupId).map(l=>({id:l.id,x:l.x,y:l.y,w:l.w,h:l.h}))};
+  return {bounds:b,items:groupLeafMembers(groupId).map(l=>({id:l.id,x:l.x,y:l.y,w:l.w,h:l.h}))};
 }
 function applyGroupMove(groupId,snap,dx,dy){
   const p=current();
@@ -2635,16 +2654,40 @@ function alignMultiSelected(mode){
   const ids=state.selectedLayerIds.slice();
   if(ids.length<2){alert('Tap "select" above and check at least two layers first.');return;}
   save();
-  const layers=current().layers.filter(l=>ids.includes(l.id));
-  const minX=Math.min(...layers.map(l=>l.x)), maxX=Math.max(...layers.map(l=>l.x+l.w));
-  const minY=Math.min(...layers.map(l=>l.y)), maxY=Math.max(...layers.map(l=>l.y+l.h));
-  layers.forEach(l=>{
-    if(mode==='left') l.x=minX;
-    else if(mode==='right') l.x=maxX-l.w;
-    else if(mode==='hcenter') l.x=(minX+maxX)/2-l.w/2;
-    else if(mode==='top') l.y=minY;
-    else if(mode==='bottom') l.y=maxY-l.h;
-    else if(mode==='vcenter') l.y=(minY+maxY)/2-l.h/2;
+  const p=current();
+  // Real request: "can I align groups with each other" - a checked GROUP has no meaningful x/y/w/h
+  // of its own to move directly (see groupLeafMembers's own note - it's just a cached bounding
+  // box), so its entry here uses that box only to work out the overall spread and the shift each
+  // side needs, then actually applies that shift by moving every real layer inside it (through the
+  // same applyGroupMove() a canvas group-drag already uses), nested groups included.
+  const entries=ids.map(id=>{
+    const l=p.layers.find(o=>o.id===id);
+    if(!l)return null;
+    if(isGroupLayer(l)){
+      const b=groupBounds(l.id);
+      return b?{id,isGroup:true,x:b.x,y:b.y,w:b.w,h:b.h}:null;
+    }
+    return {id,isGroup:false,x:l.x,y:l.y,w:l.w,h:l.h};
+  }).filter(Boolean);
+  if(entries.length<2)return;
+  const minX=Math.min(...entries.map(e=>e.x)), maxX=Math.max(...entries.map(e=>e.x+e.w));
+  const minY=Math.min(...entries.map(e=>e.y)), maxY=Math.max(...entries.map(e=>e.y+e.h));
+  entries.forEach(e=>{
+    let dx=0,dy=0;
+    if(mode==='left') dx=minX-e.x;
+    else if(mode==='right') dx=(maxX-e.w)-e.x;
+    else if(mode==='hcenter') dx=((minX+maxX)/2-e.w/2)-e.x;
+    else if(mode==='top') dy=minY-e.y;
+    else if(mode==='bottom') dy=(maxY-e.h)-e.y;
+    else if(mode==='vcenter') dy=((minY+maxY)/2-e.h/2)-e.y;
+    if(!dx && !dy)return;
+    if(e.isGroup){
+      const snap=makeGroupSnapshot(e.id);
+      applyGroupMove(e.id,snap,dx,dy);
+    }else{
+      const l=p.layers.find(o=>o.id===e.id);
+      l.x+=dx; l.y+=dy;
+    }
   });
   render();
 }
@@ -15700,6 +15743,30 @@ window.addEventListener('DOMContentLoaded',function(){
             safeToast('Layer order updated.');
           }
         }catch(err){console.error(err);}
+      }else if(commit && !d.target){
+        // Real report: "you have to ungroup first" - reorderLayerByDrop already leaves a group
+        // when dropped ONTO another row that isn't a fellow member, but dragging to empty space
+        // (below the whole list, or anywhere that isn't squarely over another row - the natural
+        // gesture for "just get this out of the group") had no drop target at all, so nothing
+        // ran and the layer snapped straight back in, indistinguishable from the drag never
+        // having happened. Treat a drop with no target as "take this one layer out of its
+        // group" whenever it's actually in one, keeping its current z-order - there's nothing
+        // else a target-less drop could sensibly mean.
+        try{
+          var p=typeof current==='function'?current():null;
+          var l=p&&(p.layers||[]).find(function(o){return o.id===d.id;});
+          if(l&&l.groupId){
+            if(typeof save==='function')save();
+            var oldGroupId=l.groupId;
+            delete l.groupId;
+            if(typeof groupMembers==='function' && groupMembers(oldGroupId).length===0){
+              p.layers=p.layers.filter(function(o){return o.id!==oldGroupId;});
+            }
+            state.selected=d.id;
+            if(typeof render==='function')render();
+            safeToast('Removed from group.');
+          }
+        }catch(err){console.error(err);}
       }
     }
     function end(e){
@@ -19954,7 +20021,12 @@ else install();
     mode=mode||'all';
     var s=S()||{};
     var group=isGroup(l);
-    var multiSelecting=!!s.layerMultiSelect && !group;
+    // Real request: "can I align groups with each other" / "can I group a group" - both need a
+    // group row to be checkable too, not just plain layers. Groups still lose their expand/
+    // collapse grip while this checkbox takes its slot (same tradeoff a plain layer's row
+    // already makes, swapping its own drag grip for a checkbox here) - toggle multi-select off
+    // to expand/collapse a group in the meantime.
+    var multiSelecting=!!s.layerMultiSelect;
     var checkedForGroup=Array.isArray(s.selectedLayerIds) && s.selectedLayerIds.indexOf(l.id)>=0;
     var row=document.createElement('div');
     row.className='layerItem ppCleanThumbRow '+(!l.customMockup&&l.id===s.selected?'active ':'')+(l.hidden?'isHidden ':'')+(group?'groupRow ':'')+(l.customMockup?'customMockupRow ':'')+(checkedForGroup?'multiChecked ':'')+(l.positionLocked?'rowLocked ':'');
@@ -19983,7 +20055,7 @@ else install();
       grip=document.createElement('button');
       grip.type='button';
       grip.className='layerCheck';
-      grip.title='select for grouping';
+      grip.title='select for grouping or aligning';
       grip.textContent=checkedForGroup?'☑':'☐';
       grip.addEventListener('click',function(e){
         e.stopPropagation();
@@ -20169,7 +20241,10 @@ else install();
     // selection like the checkbox does, not perform a normal single-select and silently drop out
     // of multi-select mode - this is the single path every row tap (thumb, name, or the row
     // itself) and the document-level capture-phase listener below both funnel through.
-    if(s.layerMultiSelect && !l.customMockup && !(typeof isGroupLayer==='function' && isGroupLayer(l))){
+    // Real request: "can I align groups with each other" / "can I group a group" - a tap on a
+    // group's row (its name/thumb, not just its checkbox) needs to toggle it into the multi-
+    // selection too now, the same as any plain layer already does here.
+    if(s.layerMultiSelect && !l.customMockup){
       if(typeof toggleLayerSelection==='function'){toggleLayerSelection(id);return;}
     }
     var scroll=saveScroll();
