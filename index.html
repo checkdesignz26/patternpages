@@ -24558,18 +24558,25 @@ body.leftCollapsed.rightCollapsed .stage.pattern,body.leftCollapsed.rightCollaps
   'use strict';
   function num(){return document.getElementById('fontSizeNumber');}
   function slider(){return document.getElementById('fontSize');}
-  // Typing an exact size: clamp to the slider's own range, push it onto the slider, then fire a
-  // real 'input' event on the slider so whichever handler currently owns it (the normal per-
-  // layer wiring, or wireControls()'s document-mode handler) applies it exactly as if the
-  // slider itself had been dragged - no need to duplicate either code path here.
-  document.addEventListener('input',function(e){
+  // Real report: "the font size doesn't correspond with the numbers" - typing "30" produced a
+  // completely different font size (confirmed directly: it landed on 130). Root cause: this
+  // clamped AND REWROTE the field's own visible text on every single keystroke, including the
+  // very first digit typed alone - typing "30" hits "3" first, which is below this slider's own
+  // minimum (8), so it was instantly force-rewritten to "8" mid-type before the second digit
+  // ever arrived. The next keystroke then landed after (or combined with, depending on where the
+  // cursor ended up after that rewrite) the wrong "8" instead of the "3" actually typed, so the
+  // field - and the layer's real font size - ended up as some other number entirely, never the
+  // one the person typed. Only clamp and apply once they're actually done editing (on 'change',
+  // e.g. losing focus or dismissing the keypad) - untouched while they're still typing, so
+  // building up a number digit by digit always keeps the digits they actually typed.
+  document.addEventListener('change',function(e){
     if(e.target!==num())return;
     var s=slider(); if(!s)return;
     var min=Number(s.min)||8, max=Number(s.max)||130;
     var v=Math.round(Number(e.target.value));
-    if(!isFinite(v))return;
+    if(!isFinite(v)) v=Number(s.value)||min;
     v=Math.max(min,Math.min(max,v));
-    if(String(v)!==e.target.value) e.target.value=v;
+    e.target.value=v;
     if(s.value!==String(v)){
       s.value=v;
       s.dispatchEvent(new Event('input',{bubbles:true}));
