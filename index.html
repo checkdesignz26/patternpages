@@ -1780,7 +1780,7 @@ body.theme-light .swbResizeHandle::after{
     <strong>Editing panel</strong>
     <span>Select something on the page, then adjust layers, size, fonts, alignment and colours here.</span>
   </div>
-  <div class="box layerPanelV2" id="layerPanelBox"><h2>layers</h2><div class="panelBody"><p class="smallText">Layer Panel 2.0: select layers, group them, then move or resize the group as one.</p><div class="layerV2Toolbar"><button id="multiSelectBtn" onclick="toggleLayerMultiSelect()" title="Turn on multi-select so you can pick several layers at once">select</button><button id="groupSelectedBtn" onclick="groupSelectedLayers()" disabled title="Group the selected layers so they move and resize together">group</button><button id="ungroupBtn" onclick="ungroupSelected()" disabled title="Split the selected group back into separate layers">ungroup</button></div><p class="smallText" style="margin:8px 0 4px;opacity:.75">tap "select" above, check two or more layers, then line them up against each other:</p><div class="grid3"><button id="alignMultiLeftBtn" onclick="alignMultiSelected('left')" disabled title="Line up the left edges of the checked layers">align left</button><button id="alignMultiHCenterBtn" onclick="alignMultiSelected('hcenter')" disabled title="Centre the checked layers horizontally, against each other">align centre</button><button id="alignMultiRightBtn" onclick="alignMultiSelected('right')" disabled title="Line up the right edges of the checked layers">align right</button></div><div class="grid3"><button id="alignMultiTopBtn" onclick="alignMultiSelected('top')" disabled title="Line up the top edges of the checked layers">align top</button><button id="alignMultiVCenterBtn" onclick="alignMultiSelected('vcenter')" disabled title="Centre the checked layers vertically, against each other">align middle</button><button id="alignMultiBottomBtn" onclick="alignMultiSelected('bottom')" disabled title="Line up the bottom edges of the checked layers">align bottom</button></div><div id="layerList" class="layerList"></div><div class="grid2"><button onclick="bringForward()" title="Bring the selected layer to the very front">to front</button><button onclick="sendBack()" title="Send the selected layer to the very back">to back</button></div><div class="grid2"><button onclick="selectedForwardOne()" title="Move the selected layer forward one step">↑ one step</button><button onclick="selectedBackOne()" title="Move the selected layer back one step">↓ one step</button></div><button class="full" onclick="duplicateSelected()" title="Duplicate the selected layer">duplicate selected</button><button class="full" onclick="deleteSelected()" title="Delete the selected layer">delete selected</button></div></div>
+  <div class="box layerPanelV2" id="layerPanelBox"><h2>layers</h2><div class="panelBody"><p class="smallText">Layer Panel 2.0: select layers, group them, then move or resize the group as one.</p><div class="layerV2Toolbar"><button id="multiSelectBtn" onclick="toggleLayerMultiSelect()" title="Turn on multi-select so you can pick several layers at once">select</button><button id="groupSelectedBtn" onclick="groupSelectedLayers()" disabled title="Group the selected layers so they move and resize together">group</button><button id="ungroupBtn" onclick="ungroupSelected()" disabled title="Split the selected group back into separate layers">ungroup</button><button id="flattenGroupBtn" onclick="flattenGroupToImage(state.selected)" disabled title="Merge everything in this group into a single flattened image layer (cannot be split apart again)">flatten to image</button></div><p class="smallText" style="margin:8px 0 4px;opacity:.75">tap "select" above, check two or more layers, then line them up against each other:</p><div class="grid3"><button id="alignMultiLeftBtn" onclick="alignMultiSelected('left')" disabled title="Line up the left edges of the checked layers">align left</button><button id="alignMultiHCenterBtn" onclick="alignMultiSelected('hcenter')" disabled title="Centre the checked layers horizontally, against each other">align centre</button><button id="alignMultiRightBtn" onclick="alignMultiSelected('right')" disabled title="Line up the right edges of the checked layers">align right</button></div><div class="grid3"><button id="alignMultiTopBtn" onclick="alignMultiSelected('top')" disabled title="Line up the top edges of the checked layers">align top</button><button id="alignMultiVCenterBtn" onclick="alignMultiSelected('vcenter')" disabled title="Centre the checked layers vertically, against each other">align middle</button><button id="alignMultiBottomBtn" onclick="alignMultiSelected('bottom')" disabled title="Line up the bottom edges of the checked layers">align bottom</button></div><div id="layerList" class="layerList"></div><div class="grid2"><button onclick="bringForward()" title="Bring the selected layer to the very front">to front</button><button onclick="sendBack()" title="Send the selected layer to the very back">to back</button></div><div class="grid2"><button onclick="selectedForwardOne()" title="Move the selected layer forward one step">↑ one step</button><button onclick="selectedBackOne()" title="Move the selected layer back one step">↓ one step</button></div><button class="full" onclick="duplicateSelected()" title="Duplicate the selected layer">duplicate selected</button><button class="full" onclick="deleteSelected()" title="Delete the selected layer">delete selected</button></div></div>
   <div class="box"><h2>edit & adjust</h2><div class="rangeRow"><label>scale</label><input id="scale" type="range" min="20" max="250" value="100" oninput="applyControls()"></div><div class="rangeRow"><label>opacity</label><input id="opacity" type="range" min="0" max="100" value="100" oninput="applyControls()"></div><div class="rangeRow"><label>x move</label><input id="xpos" type="range" min="-30" max="120" value="10" oninput="applyControls()"></div><div class="rangeRow"><label>y move</label><input id="ypos" type="range" min="-30" max="120" value="10" oninput="applyControls()"></div><div class="rangeRow"><label>width</label><input id="width" type="range" min="3" max="130" value="40" oninput="applyControls()"></div><div class="rangeRow"><label>height</label><input id="height" type="range" min="3" max="130" value="20" oninput="applyControls()"></div><div class="rangeRow"><label>rotate</label><input id="rotate" type="range" min="-180" max="180" value="0" oninput="applyControls()"></div><div id="imgShadowRow" class="imgShadowHidden"><label class="checkRow"><input id="imgShadowEnable" type="checkbox" onchange="applyControls()">shadow</label><div id="imgShadowControls" class="imgShadowControlsHidden"><div class="rangeRow"><label>blur</label><input id="imgShadow" type="range" min="0" max="30" value="15" oninput="applyControls()"></div><div class="rangeRow"><label>angle</label><input id="imgShadowAngle" type="range" min="0" max="360" value="45" oninput="applyControls()"></div><div class="rangeRow"><label>offset</label><input id="imgShadowDist" type="range" min="0" max="40" value="6" oninput="applyControls()"></div><div class="rangeRow"><label>opacity</label><input id="imgShadowOpacity" type="range" min="0" max="100" value="35" oninput="applyControls()"></div></div></div><p class="smallText" style="margin:10px 0 4px;opacity:.75">resize the box:</p><div class="grid3"><button onclick="fitSelected('width')" title="Resize the selected layer's box to the page's full width">fit to page width</button><button onclick="fitSelected('canvas')" title="Resize the selected layer's box to fill the whole page">fit to page</button><button onclick="fitSelected('safezone')" title="Resize the selected layer's box to just the centered square Etsy's search thumbnail actually shows - the rest of the page gets cropped away in search results">fit to safe zone</button></div><p class="smallText" style="margin:10px 0 4px;opacity:.75">how the image fills that box:</p><div class="editMiniGroup"><button onclick="setSelectedFit('contain')" title="Scale the selected image to fit fully inside its current box, keeping its own proportions">fit</button><button onclick="setSelectedFit('cover')" title="Scale the selected image to fill its current box completely, cropping if needed">fill</button><button onclick="setSelectedFit('cover');fitSelected('canvas')" title="Scale the selected image to fill the entire page">cover page</button><button onclick="deselect()" title="Finish editing and deselect this layer">done</button></div><div id="collageZoomRow" class="collageZoomHidden"><p class="smallText" style="margin:10px 0 4px;opacity:.75">this photo in its collage frame — drag the photo on the canvas to reposition it:</p><div class="rangeRow"><label>photo zoom</label><input id="collageZoom" type="range" min="100" max="300" value="100" oninput="applyControls()"></div><button class="full" onclick="resetCollagePhoto()" title="Reset this photo's zoom and position back to centered">reset photo position</button></div><div class="gestureHint">Tap empty canvas to deselect. Pinch with two fingers to zoom the page. Two-finger double tap = undo.</div><div class="status" id="selectedHint">Nothing selected</div><button id="fillThisSlotBtn" class="full primary hidden" onclick="window.fillSelectedFrame&&window.fillSelectedFrame()" title="Fill just this placeholder with the pattern selected in the tray">✨ fill this placeholder from tray</button></div>
   <div class="box" id="alignPanel"><h2>alignment</h2><p class="smallText">Align the selected text, banner, image, label or frame to the page - or, if it's part of a group, to that group instead.</p><div class="grid3"><button onclick="alignSelected('left')" title="Align the selected layer to the left edge of the page">left</button><button onclick="alignSelected('hcenter')" title="Centre the selected layer horizontally">centre</button><button onclick="alignSelected('right')" title="Align the selected layer to the right edge of the page">right</button></div><div class="grid3"><button onclick="alignSelected('top')" title="Align the selected layer to the top of the page">top</button><button onclick="alignSelected('vcenter')" title="Centre the selected layer vertically">middle</button><button onclick="alignSelected('bottom')" title="Align the selected layer to the bottom of the page">bottom</button></div><div class="grid2"><button onclick="alignSelected('centerBoth')" title="Centre the selected layer on the page, both ways">centre page</button><button onclick="alignSelected('safeMiddle')" title="Centre the selected layer within the safe printable area">safe middle</button></div></div>
   <div class="box matchmakerBox"><h2>font matchmaker</h2>
@@ -2641,6 +2641,61 @@ function ungroupSelected(){
   p.layers=p.layers.filter(l=>l.id!==g.id);
   state.selected=null;
   render();
+}
+// Real request: "shall we have merge down for the layer panel say somebody make a template
+// designs their banner and want to use it as one png" - unlike groupLeafMembers() (which skips
+// group-type nodes to get at the real content underneath), removing a flattened group needs EVERY
+// id it covers, including any nested group's own synthetic layer, or those would be orphaned
+// (never deleted, never shown - `l.groupId` would point at nothing).
+function allDescendantIds(groupId,seen){
+  seen=seen||{};
+  if(seen[groupId])return [];
+  seen[groupId]=true;
+  const direct=current().layers.filter(l=>l.groupId===groupId);
+  let out=[];
+  direct.forEach(l=>{
+    out.push(l.id);
+    if(isGroupLayer(l)) out=out.concat(allDescendantIds(l.id,seen));
+  });
+  return out;
+}
+// Real request: "merge down" for a finished template so it can be used as one png. This isn't a
+// literal merge-down (there's nothing beneath a group to merge into) - it renders exactly what
+// this group already looks like, using the SAME per-layer-type drawing code the real PNG export
+// uses (window.renderPageToCanvas), onto a small transparent canvas sized to just the group's own
+// bounding box, then replaces the whole group (and every real layer inside it, however deeply
+// nested) with a single new image layer. Destructive - individual members can no longer be
+// repositioned or restyled afterward - so it goes through the same non-blocking confirm dialog
+// already used for deleting a layer (native confirm() is unreliable mid-click on iOS Safari).
+async function flattenGroupToImage(groupId){
+  const p=current();
+  const g=p.layers.find(l=>l.id===groupId);
+  if(!g || !isGroupLayer(g)){alert('Select a group first.');return;}
+  const box=groupBounds(groupId);
+  const members=groupLeafMembers(groupId);
+  if(!box || !members.length){alert('This group has nothing to flatten.');return;}
+  ppShowConfirmDialog('Flatten this group into a single image? The layers inside it can no longer be edited separately afterward.',async function(){
+    save();
+    const pxBox={x:box.x/100*p.w,y:box.y/100*p.h,w:Math.max(1,box.w/100*p.w),h:Math.max(1,box.h/100*p.h)};
+    const synthetic={w:pxBox.w,h:pxBox.h,layers:members.map(l=>Object.assign({},l,{
+      x:(l.x-box.x)/box.w*100,
+      y:(l.y-box.y)/box.h*100,
+      w:l.w/box.w*100,
+      h:l.h/box.h*100,
+    }))};
+    const oldDrawTextureBackground=window.drawTextureBackground;
+    window.drawTextureBackground=function(){};
+    let canvas;
+    try{ canvas=await window.renderPageToCanvas(synthetic); }
+    finally{ window.drawTextureBackground=oldDrawTextureBackground; }
+    const dataUrl=canvas.toDataURL('image/png');
+    const removeIds=new Set(allDescendantIds(groupId).concat([groupId]));
+    p.layers=p.layers.filter(l=>!removeIds.has(l.id));
+    const img=layer('image',{x:box.x,y:box.y,w:box.w,h:box.h,z:g.z||nextZ(),name:(g.name||'group')+' (flattened)',src:dataUrl,fit:'cover'});
+    p.layers.push(img);
+    state.selected=img.id;
+    render();
+  },'Flatten');
 }
 // Real request: "an option to group elements and align them" - grouping already existed (the
 // multi-select checkboxes above feed groupSelectedLayers()), but the existing "alignment" panel
@@ -19994,7 +20049,8 @@ else install();
   // session for window.prompt() (see ppShowSaveAsDialog and ppShowPasteToPageDialog): native
   // dialogs shown mid-click-handler are known to be unreliable on iOS/iPadOS Safari. A custom,
   // non-blocking in-page dialog never touches confirm() at all.
-  function ppShowConfirmDialog(message,onConfirm){
+  function ppShowConfirmDialog(message,onConfirm,okLabel){
+    okLabel=okLabel||'Delete';
     var old=document.getElementById('ppConfirmDialogOverlay'); if(old)old.remove();
     var overlay=document.createElement('div');
     overlay.id='ppConfirmDialogOverlay';
@@ -20003,8 +20059,8 @@ else install();
     box.style.cssText='background:#1c1626;border:1px solid rgba(255,232,248,.18);border-radius:16px;padding:20px;max-width:340px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.5);';
     box.innerHTML='<div style="color:var(--whiteText,#fff8fb);font:900 15px system-ui;margin-bottom:16px;line-height:1.35;">'+String(message).replace(/[<>]/g,'')+'</div>'+
       '<div style="display:flex;gap:8px;justify-content:flex-end;">'+
-      '<button type="button" id="ppConfirmDialogCancel" title="Cancel without deleting" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(255,232,248,.2);background:transparent;color:var(--whiteText,#fff8fb);font-weight:700;">Cancel</button>'+
-      '<button type="button" id="ppConfirmDialogOk" title="Confirm the delete" style="padding:9px 16px;border-radius:10px;border:0;background:linear-gradient(135deg,#9b6bff,#ff8ed6);color:#fff;font-weight:800;">Delete</button>'+
+      '<button type="button" id="ppConfirmDialogCancel" title="Cancel" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(255,232,248,.2);background:transparent;color:var(--whiteText,#fff8fb);font-weight:700;">Cancel</button>'+
+      '<button type="button" id="ppConfirmDialogOk" title="Confirm" style="padding:9px 16px;border-radius:10px;border:0;background:linear-gradient(135deg,#9b6bff,#ff8ed6);color:#fff;font-weight:800;">'+String(okLabel).replace(/[<>]/g,'')+'</button>'+
       '</div>';
     overlay.appendChild(box);
     document.body.appendChild(overlay);
@@ -22021,10 +22077,11 @@ else install();
       if(el)el.disabled=!canGroupOrAlign;
     });
     var uBtn=document.getElementById('ungroupBtn');
-    if(uBtn){
-      var sel=typeof getLayer==='function'?getLayer():null;
-      uBtn.disabled=!(sel&&typeof isGroupLayer==='function'&&isGroupLayer(sel));
-    }
+    var sel=typeof getLayer==='function'?getLayer():null;
+    var isGroupSelected=!!(sel&&typeof isGroupLayer==='function'&&isGroupLayer(sel));
+    if(uBtn)uBtn.disabled=!isGroupSelected;
+    var fBtn=document.getElementById('flattenGroupBtn');
+    if(fBtn)fBtn.disabled=!isGroupSelected;
   }
   function installRenderLayers(){
     window.renderLayers=function(){
