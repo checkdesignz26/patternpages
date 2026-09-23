@@ -2456,7 +2456,16 @@ function addShape(kind){save();let sq=kind==='square'||kind==='circle';
   // Same fixed-position stacking issue as addText() above, for shapes added one after another.
   var nShape=current().layers.filter(function(x){return x.type===kind}).length;
   var offsetShape=(nShape%5)*5;
-  current().layers.push(layer(kind,{name:kind,x:25+offsetShape,y:25+offsetShape,w:sq?25:40,h:sq?25:18,fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,z:nextZ()}));state.selected=current().layers.at(-1).id;render()}
+  var w=sq?25:40;
+  // Real report: a new "circle" came out as an oval. l.w/l.h are percentages of the PAGE's own
+  // width/height, not of each other - a flat 25/25 split only draws an actual square (and
+  // therefore an actual circle) on a perfectly square page. Every other listed preset (Etsy's own
+  // default listing image is 3000x2250, 4:3) is NOT square, so the same 25% cut of a wider width
+  // and a shorter height always came out as a rectangle/ellipse instead. Scaling h by the page's
+  // own aspect ratio makes the box's real on-page pixel dimensions equal, whatever shape the page is.
+  var p=current();
+  var h=sq?(w*(p.w/p.h)):18;
+  current().layers.push(layer(kind,{name:kind,x:25+offsetShape,y:25+offsetShape,w:w,h:h,fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,z:nextZ()}));state.selected=current().layers.at(-1).id;render()}
 function nextZ(){return Math.max(0,...current().layers.map(l=>l.z||0))+1}
 function getLayer(){updateAllGroupBounds();return current().layers.find(l=>l.id===state.selected)}
 function render(){renderPages();renderPageList();renderLayers();renderFrameList();syncControls();renderTrays()}
@@ -3053,13 +3062,30 @@ if(l.type==='frame'){
 d.innerHTML+=`<button type="button" class="deleteMini" aria-label="delete element" title="Delete this element">×</button><div class="resizeHint">drag corner to resize</div><div class="rotateHandle"></div><div class="handle"></div>`;
 const mini=d.querySelector('.deleteMini');
 if(mini){
+  // Real report: "when I want to move it the x is in the way so it gets delete" - a touch that
+  // LANDS on the delete button (it sits right at the box's corner, and can fall back to sitting
+  // right on top of the box itself when floating it outside would overlap another nearby layer)
+  // used to delete unconditionally on release, no matter how far the finger then dragged trying
+  // to move the shape instead. Touch input implicitly keeps delivering pointerup/touchend to
+  // whichever element a touch STARTED on, regardless of where the finger ends up, so a drag that
+  // merely began on the × - even while actually moving the shape somewhere else entirely - still
+  // fired a delete right out from under it. Now it only deletes for an actual tap (released close
+  // to where it went down); a real drag that happened to start on the × is treated as an aborted
+  // tap and simply does nothing, rather than deleting the layer the user was trying to move.
+  let downX=0, downY=0, deleteArmed=false;
+  const recordDown = ev=>{ const pt=(ev.touches&&ev.touches[0])||ev; downX=pt.clientX; downY=pt.clientY; deleteArmed=true; };
+  const checkMoved = ev=>{ const pt=(ev.changedTouches&&ev.changedTouches[0])||ev; if(typeof pt.clientX==='number' && Math.hypot(pt.clientX-downX,pt.clientY-downY)>10) deleteArmed=false; };
   const doDelete = ev => {
     ev.preventDefault();
     ev.stopPropagation();
+    checkMoved(ev);
+    if(!deleteArmed) return;
+    deleteArmed=false;
     deleteLayerById(l.id,pi);
   };
   // iPad/Koder sometimes swallows normal click after pointer capture, so delete on pointerup too.
-  mini.addEventListener('pointerdown', ev=>{ev.preventDefault();ev.stopPropagation();}, {passive:false});
+  mini.addEventListener('pointerdown', ev=>{recordDown(ev);ev.preventDefault();ev.stopPropagation();}, {passive:false});
+  mini.addEventListener('touchstart', recordDown, {passive:true});
   mini.addEventListener('pointerup', doDelete, {passive:false});
   mini.addEventListener('touchend', doDelete, {passive:false});
   mini.addEventListener('click', doDelete);
