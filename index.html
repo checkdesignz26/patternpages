@@ -1897,6 +1897,48 @@ function newPage(type='listing'){
 }
 function presetPage(key){let pr=PAGE_PRESETS[key]||PAGE_PRESETS['etsy-listing'];return{type:pr.type,w:pr.w,h:pr.h,layers:[]}}
 function addPresetPage(key){save();state.pages.push(presetPage(key));state.selectedPage=state.pages.length-1;state.selected=null;render();scrollSel()}
+// Real request: greet a brand new trial user (nothing saved yet, in IndexedDB or otherwise) with
+// a worked example instead of an overwhelming blank canvas - a dummy Etsy storefront listing with
+// a pattern, shop banner and logo slot already laid out. Every slot sits inside the real Etsy
+// search-thumbnail safe zone (window.ppEtsySafeZoneBoxPct - the same centered square the "show
+// etsy crop guide" overlay and "fit to safe zone" button already use), so the example itself
+// teaches the safe-zone lesson rather than needing a separate explanation. Reuses the existing
+// placeholder machinery (isPlaceholder/templatePlaceholder/placeholderName, decoratePlaceholderLabels
+// further down) for the dashed outline + instructional label, purely data - no rendering code of
+// its own - and l.dummyStorefront just picks the warm-gray look over the purple "real template"
+// one. Placeholder layers already export as a plain fill with no dashed border/text (see
+// renderPageToCanvas), so downloading this demo as-is never leaks the instructional labels.
+window.ppMakeDummyStorefrontPage=function(){
+  var p=newPage('listing');
+  var safeBox=(typeof window.ppEtsySafeZoneBoxPct==='function')?window.ppEtsySafeZoneBoxPct(p):{x:12.5,y:0,w:75,h:100};
+  var pattern=layer('pattern',{
+    name:'pattern placeholder',
+    x:safeBox.x,y:safeBox.y,w:safeBox.w,h:safeBox.h,
+    patternSlot:true,isPlaceholder:true,templatePlaceholder:true,dummyStorefront:true,
+    placeholderName:'Drop your seamless pattern here',
+    fill:'transparent',z:1
+  });
+  var bannerH=safeBox.h*0.16;
+  var banner=layer('banner',{
+    name:'shop banner',
+    x:safeBox.x+safeBox.w*0.08,y:safeBox.y+safeBox.h*0.66,
+    w:safeBox.w*0.84,h:bannerH,
+    isPlaceholder:true,templatePlaceholder:true,dummyStorefront:true,
+    placeholderName:'Your shop banner / listing title',
+    fill:'rgba(255,255,255,.92)',z:2
+  });
+  var logoW=safeBox.w*0.14, logoH=logoW*(p.w/p.h);
+  var logo=layer('image',{
+    name:'shop logo',
+    x:safeBox.x+safeBox.w-logoW-safeBox.w*0.04,y:safeBox.y+safeBox.h*0.04,
+    w:logoW,h:logoH,
+    isPlaceholder:true,templatePlaceholder:true,dummyStorefront:true,
+    placeholderName:'Your shop logo',
+    fill:'rgba(255,255,255,.92)',z:3
+  });
+  p.layers.push(pattern,banner,logo);
+  return p;
+};
 function layer(type,props={}){return Object.assign({id:uid(),type,name:type,x:10,y:10,w:35,h:20,r:0,opacity:1,scale:1,z:1,src:null,text:'Your label',font:'system-ui',fontSize:36,color:'#555555',fill:'rgba(255,255,255,.92)',border:'#111111',borderW:0,bold:false,italic:false,fit:'cover',textShadow:0,textGlow:0,textStroke:0,effectColor:'#ffffff',badgeShape:null,textAlign:'center'},props)}
 function current(){return state.pages[state.selectedPage]}
 function fittedLayerSizeForImage(img, targetW=72, minH=10, maxH=86){
@@ -8107,6 +8149,29 @@ document.addEventListener('click', function(e){
       const raw=localStorage.getItem(AUTOSAVE_KEY);
       if(raw){ idbSet(AUTOSAVE_KEY, JSON.parse(raw)).catch(()=>{}); }
     }catch(err){}
+  }).catch(()=>{});
+  // Real request: greet a brand new trial user with a worked example instead of a blank canvas.
+  // "Brand new" means no autosave AND no quick save in this browser's own IndexedDB - init() at
+  // the top of the file has already run by now (it's called synchronously, long before this IIFE
+  // even parses) and always starts with a single blank listing page, so there's no earlier hook to
+  // ask "has this browser saved anything before?" until this async IndexedDB check itself
+  // resolves. The `stillPristine` guard is what makes running this late safe: if the user has
+  // already started typing/clicking in the brief gap before these two idbGet calls resolve, their
+  // one still-blank page will have gained a layer or a real selection by then, and this backs off
+  // instead of silently overwriting their first few seconds of work.
+  window.ppHasAnySavedProject=function(){
+    return Promise.all([idbGet(AUTOSAVE_KEY),idbGet(QUICKSAVE_KEY)]).then(function(results){
+      return !!(results[0]||results[1]);
+    });
+  };
+  window.ppHasAnySavedProject().then(function(hasSaved){
+    if(hasSaved) return;
+    var pristine=Array.isArray(state.pages) && state.pages.length===1 && (state.pages[0].layers||[]).length===0;
+    if(!pristine) return;
+    if(typeof window.ppMakeDummyStorefrontPage!=='function') return;
+    state.pages=[window.ppMakeDummyStorefrontPage()];
+    state.selectedPage=0; state.selected=null;
+    if(typeof window.render==='function') window.render();
   }).catch(()=>{});
   let saveTimer=null;
   function queueAutoSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>window.saveAutoSaveNow(true),900); }
@@ -20693,6 +20758,8 @@ else install();
   box-shadow:0 8px 18px rgba(0,0,0,.18);
 }
 .layer.templatePlaceholder.selected .ppPlaceholderLabel{background:rgba(255,142,214,.84);color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.65),0 10px 24px rgba(0,0,0,.22)}
+.layer.templatePlaceholder.ppDummyStorefrontSlot:not(.selected){outline:2px dashed rgba(146,124,98,.55)!important;outline-offset:3px!important;background:rgba(146,124,98,.06)}
+.layer.templatePlaceholder.ppDummyStorefrontSlot .ppPlaceholderLabel{background:rgba(74,64,54,.72);color:rgba(255,248,240,.94);border-color:rgba(255,248,240,.28)}
 .layerItem.placeholderRow .layerName::before{content:'◇ ';color:var(--pinkAccentText,#ffb8e7);font-weight:950}
 .layerItem.placeholderRow{border-color:rgba(255,142,214,.24)!important;background:rgba(255,142,214,.055)!important}
 </style>
@@ -20922,6 +20989,11 @@ else install();
       try{ for(const p of (state.pages||[])){l=(p.layers||[]).find(x=>x.id===id); if(l)break;} }catch(e){}
       const old=el.querySelector('.ppPlaceholderLabel'); if(old)old.remove();
       el.classList.toggle('templatePlaceholder',!!isPlaceholderLayer(l));
+      // First-run "dummy storefront" slots (see ppMakeDummyStorefrontPage) reuse this same
+      // placeholder machinery for their dashed outline + instructional label, but get a distinct
+      // warm-gray look instead of the purple "you built this template" styling above, so a brand
+      // new trial user's example layout doesn't read as if they'd already set up a real template.
+      el.classList.toggle('ppDummyStorefrontSlot',!!(l && l.dummyStorefront));
       if(isPlaceholderLayer(l)){
         el.dataset.placeholderName=placeholderName(l);
         const badge=document.createElement('div');badge.className='ppPlaceholderLabel';badge.textContent=placeholderName(l);
