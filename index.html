@@ -2003,6 +2003,21 @@ window.ppEnsureTextBoxFits=function(l){
   }
   return grew;
 };
+// Real report, with a published export: a title that had been sitting there clipped for a while
+// (saved into a .ppages file back when its box was too short) was STILL clipped after reopening
+// the project - ppEnsureTextBoxFits above only ever runs when a text control actually changes, so
+// a layer that was already clipped when it was loaded just stays clipped forever unless someone
+// happens to touch its font settings again. Sweeping every text/label layer once, right after a
+// project's pages actually land in the DOM, catches every pre-existing clipped title/label from
+// before this fix existed - not just ones edited going forward.
+window.ppSweepAllTextBoxFits=function(){
+  if(typeof state==='undefined' || !state.pages) return;
+  state.pages.forEach(function(p){
+    (p.layers||[]).forEach(function(l){
+      if(l.type==='text'||l.type==='label') window.ppEnsureTextBoxFits(l);
+    });
+  });
+};
 function addTitleSubtitle(){
  save();
  let title=layer('text',{name:'headline text',text:'New Collection',x:12,y:12,w:76,h:12,fill:'transparent',font:'Georgia',fontSize:62,bold:false,color:'#555555',z:nextZ()});
@@ -7982,6 +7997,7 @@ document.addEventListener('click', function(e){
     const map={listingPatternName:'patternName', listingKeywords:'keywords', etsyTagsOutput:'etsyTags', longTailKeywordsOutput:'longTail', listingTitleOutput:'title', pinterestKeywordsOutput:'pinterest', instagramHashtagsOutput:'instagram'};
     Object.keys(map).forEach(id=>{const n=safe$(id); if(n && la[map[id]]!=null)n.value=la[map[id]];});
     if(typeof window.render==='function') render();
+    if(typeof window.ppSweepAllTextBoxFits==='function') window.ppSweepAllTextBoxFits();
     setStatus((source||'Project')+' restored.');
     return true;
   }
@@ -20852,6 +20868,7 @@ else install();
           const h=byId('handModeBtn'); if(h)h.textContent=state.leftHanded?'right-handed layout':'left-handed layout';
         }
         if(typeof render==='function')render();
+        if(typeof window.ppSweepAllTextBoxFits==='function') window.ppSweepAllTextBoxFits();
         // Custom mock-ups lose their src on save (strippedLayer can't decode images
         // synchronously) - regenerate the plain mask-shaped placeholder now that images can be
         // decoded, so they show their real silhouette instead of a plain rectangle.
@@ -21021,6 +21038,7 @@ else install();
     document.body.classList.toggle('leftCollapsed',!!st.leftCollapsed);
     document.body.classList.toggle('rightCollapsed',!!st.rightCollapsed);
     if(typeof render==='function') render();
+    if(typeof window.ppSweepAllTextBoxFits==='function') window.ppSweepAllTextBoxFits();
     try{if(typeof autosaveSoon==='function') autosaveSoon();}catch(e){}
   }
   window.loadPstudioFile=function(event){
