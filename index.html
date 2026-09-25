@@ -8089,8 +8089,7 @@ document.addEventListener('click', function(e){
   let autoSaveBackoffUntil=0;
   let autoSaveNotifiedQuotaFull=false;
   const AUTOSAVE_BACKOFF_MS=60000;
-  window.saveAutoSaveNow=function(silent){
-    if(Date.now()<autoSaveBackoffUntil){ return false; }
+  function reallySaveAutoSaveNow(silent){
     idbSet(AUTOSAVE_KEY, makeProjectSnapshot()).then(()=>{
       autoSaveNotifiedQuotaFull=false;
       if(!silent) showAutoSaveNotice('auto-saved');
@@ -8104,6 +8103,35 @@ document.addEventListener('click', function(e){
         setStatus('Auto-save is full - your project is too large for browser storage. Use "save .ppages" to back up your work.');
       }
     });
+  }
+  window.saveAutoSaveNow=function(silent){
+    if(Date.now()<autoSaveBackoffUntil){ return false; }
+    // Real report: "autosave isn't working" - confirmed by direct reproduction, not a report of
+    // autosave failing to WRITE (it writes fine) but of it silently destroying a real backup
+    // within about a second of every reload. init() always boots into a single blank page (it
+    // never auto-restores on its own - see the crash-recovery confirm() below, which is meant to
+    // ask first) and this file has ~20 independent script blocks that each re-render for their own
+    // unrelated housekeeping shortly after load (decorating placeholder labels, re-syncing a
+    // panel, etc, several via their own setTimeout(...,800/1000/1200)); render()'s own wrap queues
+    // a silent autosave on every single one of those, with no way to tell a real edit apart from
+    // incidental boot noise. On a platform where the crash-recovery confirm() below doesn't
+    // reliably block (this file has hit exactly that on iPad Safari before, which is why
+    // ppShowConfirmDialog exists instead of confirm() elsewhere), whichever housekeeping render
+    // lands first wins the race and silently overwrites the real backup with that still-blank
+    // page - so "restore autosave" afterward just brings back the blank page that clobbered the
+    // real work seconds earlier. A silent save of an untouched blank project is never something
+    // that needs to happen at all while a real, non-empty backup already sits there unreviewed -
+    // checking first (only on this specific, otherwise-rare pristine+silent path; every real edit
+    // still saves immediately as before) closes the race without slowing down normal saving at all.
+    var pristineNow=Array.isArray(state.pages) && state.pages.every(p=>!((p.layers||[]).length));
+    if(silent && pristineNow){
+      idbGet(AUTOSAVE_KEY).then(existing=>{
+        var hasRealBackup=existing && Array.isArray(existing.pages) && existing.pages.some(p=>(p.layers||[]).length>0);
+        if(!hasRealBackup) reallySaveAutoSaveNow(silent);
+      }).catch(()=>{ reallySaveAutoSaveNow(silent); });
+      return true;
+    }
+    reallySaveAutoSaveNow(silent);
     return true;
   };
   window.restoreAutoSave=function(){
